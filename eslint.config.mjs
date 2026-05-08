@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Prototype files are read-only visual specs, not production code.
+    "prototypes/**",
   ]),
 ]);
 
