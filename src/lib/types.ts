@@ -1,4 +1,10 @@
-// Domain types for Noghurt Brain.
-// Populated in Phase 2 (Room, Player) and Phase 3 (Question).
+import type { LucideIcon } from 'lucide-react';
 
-export {};
+export type PlayerColor = 'pink' | 'cyan' | 'green' | 'yellow' | 'red' | 'purple';
+
+export type Player = {
+  id: string;
+  name: string;
+  color: PlayerColor;
+  Icon: LucideIcon;
+};

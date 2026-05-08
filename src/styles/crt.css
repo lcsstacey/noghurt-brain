@@ -1,30 +1,337 @@
 /*
  * crt.css — CRT / pixel aesthetic primitives.
+ * Ported verbatim from prototypes/noghurt-brain.tsx InjectedStyles block.
  *
- * Phase 0 stub: only the font and glow utilities. The full keyframe
- * library (scanlines, scan-line, vignette, glitch, shake, neon-pulse,
- * blink, pixel-pop, warning-pulse, flame-flick) lands in Phase 1
- * per docs/DESIGN_SYSTEM.md section 3.
+ * Skipped from prototype:
+ *  - .float-up / @keyframes floatUp  (emote floaters; v1.5)
+ *  - .flame-flick                    (streak flame icons; v1.5)
+ *
+ * Per docs/DESIGN_SYSTEM.md § 3, this is the single source of all
+ * keyframes — do not duplicate per component.
  */
 
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
 
+/* ── Fonts ─────────────────────────────────────────────────────── */
 .font-pixel {
   font-family: 'Press Start 2P', ui-monospace, monospace;
   letter-spacing: 0.04em;
 }
-
 .font-crt {
   font-family: 'VT323', 'Courier New', monospace;
   letter-spacing: 0.02em;
 }
 
+/* ── Backgrounds ───────────────────────────────────────────────── */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(255, 46, 136, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.06) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* ── Overlays ──────────────────────────────────────────────────── */
+.scanlines {
+  position: relative;
+}
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.28) 0px,
+    rgba(0, 0, 0, 0.28) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  pointer-events: none;
+  z-index: 30;
+  mix-blend-mode: multiply;
+}
+.vignette::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.7) 100%);
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* ── Text effects ──────────────────────────────────────────────── */
 .text-glow {
   text-shadow:
     0 0 6px currentColor,
     0 0 14px currentColor;
 }
-
 .text-glow-soft {
   text-shadow: 0 0 4px currentColor;
+}
+.pixel-shadow {
+  box-shadow:
+    0 0 0 2px #000,
+    0 0 0 6px currentColor,
+    0 0 24px currentColor;
+}
+
+/* ── Glitch (RGB-split) ────────────────────────────────────────── */
+@keyframes glitchAnim {
+  0%,
+  100% {
+    transform: translate(0);
+    text-shadow:
+      0 0 0 currentColor,
+      4px 0 0 transparent,
+      -4px 0 0 transparent;
+  }
+  20% {
+    transform: translate(-1px, 1px);
+    text-shadow:
+      3px 0 #ff2e88,
+      -3px 0 #00f0ff;
+  }
+  40% {
+    transform: translate(-1px, -1px);
+    text-shadow:
+      -3px 0 #ff2e88,
+      3px 0 #00f0ff;
+  }
+  60% {
+    transform: translate(1px, 1px);
+    text-shadow:
+      3px 0 #00f0ff,
+      -3px 0 #ff2e88;
+  }
+  80% {
+    transform: translate(1px, -1px);
+    text-shadow:
+      -3px 0 #00f0ff,
+      3px 0 #ff2e88;
+  }
+}
+.glitch {
+  animation: glitchAnim 0.5s infinite;
+}
+.glitch-slow {
+  animation: glitchAnim 2s infinite;
+}
+
+/* ── Camera shake (wrong-answer reveal) ────────────────────────── */
+@keyframes shakeAnim {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-12px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(12px);
+  }
+}
+.shake {
+  animation: shakeAnim 0.55s;
+}
+
+/* ── Neon pulse (active buttons) ───────────────────────────────── */
+@keyframes neonPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 6px currentColor,
+      0 0 14px currentColor,
+      inset 0 0 6px currentColor;
+  }
+  50% {
+    box-shadow:
+      0 0 16px currentColor,
+      0 0 30px currentColor,
+      inset 0 0 12px currentColor;
+  }
+}
+.neon-pulse {
+  animation: neonPulse 1.4s ease-in-out infinite;
+}
+
+/* ── Cursor blink ──────────────────────────────────────────────── */
+@keyframes blinkAnim {
+  0%,
+  55% {
+    opacity: 1;
+  }
+  56%,
+  100% {
+    opacity: 0;
+  }
+}
+.blink {
+  animation: blinkAnim 1.1s infinite;
+}
+
+/* ── Pixel pop (scale-and-rotate intro) ────────────────────────── */
+@keyframes pixelPop {
+  0% {
+    transform: scale(0) rotate(-10deg);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(1.18) rotate(2deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+.pixel-pop {
+  animation: pixelPop 0.35s ease-out backwards;
+}
+
+/* ── Scan-line traversing top-to-bottom every 5s ───────────────── */
+@keyframes scanLineMove {
+  0% {
+    transform: translateY(-30%);
+  }
+  100% {
+    transform: translateY(130%);
+  }
+}
+.scan-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: linear-gradient(180deg, transparent, rgba(0, 240, 255, 0.35), transparent);
+  animation: scanLineMove 5s linear infinite;
+  pointer-events: none;
+  z-index: 32;
+}
+
+/* ── Warning pulse (low timer / urgent UI) ─────────────────────── */
+@keyframes warningPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+.warning-pulse {
+  animation: warningPulse 0.4s infinite;
+}
+
+/* ── Mainframe theme (Phase 3 finale) ──────────────────────────── */
+@keyframes mainframeBg {
+  0%,
+  100% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+}
+.mainframe-bg {
+  background: linear-gradient(45deg, #ff0040, #b829ff, #00f0ff, #ff2e88, #ff0040);
+  background-size: 400% 400%;
+  animation: mainframeBg 3s ease infinite;
+}
+
+/* ── Subtle CRT flicker ────────────────────────────────────────── */
+@keyframes flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+  51% {
+    opacity: 1;
+  }
+}
+.flicker {
+  animation: flicker 4s infinite;
+}
+
+/* ── Slide-in-up (phase enter) ─────────────────────────────────── */
+@keyframes slideInUp {
+  0% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.slide-up {
+  animation: slideInUp 0.4s ease-out backwards;
+}
+
+/* ── Radar sweep (waiting state) ───────────────────────────────── */
+@keyframes radarSweep {
+  0% {
+    transform: rotate(0);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+.radar-sweep {
+  animation: radarSweep 2s linear infinite;
+}
+
+/* ── 3D button (press effect) ──────────────────────────────────── */
+.btn-3d {
+  transition:
+    transform 0.06s,
+    box-shadow 0.06s;
+  box-shadow:
+    0 6px 0 0 rgba(0, 0, 0, 0.85),
+    0 0 0 3px currentColor;
+}
+.btn-3d:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow:
+    0 2px 0 0 rgba(0, 0, 0, 0.85),
+    0 0 0 3px currentColor;
+}
+
+/* ── Utilities ─────────────────────────────────────────────────── */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+input.retro-input::placeholder {
+  color: rgba(57, 255, 20, 0.4);
+}
+input.retro-input:focus {
+  outline: none;
+}
+
+/* ── Reduced motion ────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .scan-line,
+  .shake,
+  .glitch,
+  .glitch-slow,
+  .pixel-pop,
+  .warning-pulse,
+  .slide-up,
+  .radar-sweep,
+  .mainframe-bg {
+    animation: none;
+  }
 }
