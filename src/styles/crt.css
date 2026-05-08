@@ -1,0 +1,30 @@
+/*
+ * crt.css — CRT / pixel aesthetic primitives.
+ *
+ * Phase 0 stub: only the font and glow utilities. The full keyframe
+ * library (scanlines, scan-line, vignette, glitch, shake, neon-pulse,
+ * blink, pixel-pop, warning-pulse, flame-flick) lands in Phase 1
+ * per docs/DESIGN_SYSTEM.md section 3.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+.font-pixel {
+  font-family: 'Press Start 2P', ui-monospace, monospace;
+  letter-spacing: 0.04em;
+}
+
+.font-crt {
+  font-family: 'VT323', 'Courier New', monospace;
+  letter-spacing: 0.02em;
+}
+
+.text-glow {
+  text-shadow:
+    0 0 6px currentColor,
+    0 0 14px currentColor;
+}
+
+.text-glow-soft {
+  text-shadow: 0 0 4px currentColor;
+}
