@@ -1,23 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChevronRight, KeyRound, Power, Radio, X } from 'lucide-react';
 import { C } from '@/styles/palette';
-
-// Per docs/ARCHITECTURE.md § 3: 4-char code from a 32-letter alphabet
-// excluding visually confusable chars (O, 0, I, 1).
-const ALPHABET = /[A-HJ-NP-Z2-9]/;
-const filterCode = (raw: string) =>
-  raw
-    .toUpperCase()
-    .split('')
-    .filter((c) => ALPHABET.test(c))
-    .slice(0, 4)
-    .join('');
+import { createRoom } from '@/lib/actions/createRoom';
+import { normalizeCode } from '@/lib/game/code';
 
 export default function LandingPage() {
+  const router = useRouter();
   const [showJoin, setShowJoin] = useState(false);
   const [code, setCode] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isCreating, startCreating] = useTransition();
+
+  const handleCreate = () => {
+    setError(null);
+    startCreating(async () => {
+      const result = await createRoom();
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      router.push(`/host/${result.code}`);
+    });
+  };
+
+  const handleJoinSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (code.length !== 4) return;
+    router.push(`/play/${code}`);
+  };
 
   return (
     <main
@@ -61,14 +74,13 @@ export default function LandingPage() {
           <div className="flex flex-col gap-4 w-full max-w-xs">
             <button
               type="button"
-              onClick={() => {
-                /* Phase 2: server action */
-              }}
-              className="btn-3d font-pixel text-base py-4 px-6 flex items-center justify-center gap-3 bg-black"
+              onClick={handleCreate}
+              disabled={isCreating}
+              className="btn-3d font-pixel text-base py-4 px-6 flex items-center justify-center gap-3 bg-black disabled:opacity-50"
               style={{ color: C.pink }}
             >
-              <Power size={18} />
-              CREATE ROOM
+              <Power size={18} className={isCreating ? 'warning-pulse' : ''} />
+              {isCreating ? 'INITIALIZING…' : 'CREATE ROOM'}
               <ChevronRight size={18} />
             </button>
 
@@ -83,20 +95,14 @@ export default function LandingPage() {
                 JOIN WITH CODE
               </button>
             ) : (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  /* Phase 2: navigate to /play/[code] */
-                }}
-                className="flex flex-col gap-3"
-              >
+              <form onSubmit={handleJoinSubmit} className="flex flex-col gap-3">
                 <label htmlFor="room-code" className="sr-only">
                   Room code
                 </label>
                 <input
                   id="room-code"
                   value={code}
-                  onChange={(e) => setCode(filterCode(e.target.value))}
+                  onChange={(e) => setCode(normalizeCode(e.target.value))}
                   maxLength={4}
                   autoCapitalize="characters"
                   spellCheck={false}
@@ -128,6 +134,15 @@ export default function LandingPage() {
                   </button>
                 </div>
               </form>
+            )}
+
+            {error && (
+              <div
+                className="font-pixel text-xs text-center mt-2"
+                style={{ color: C.red }}
+              >
+                ✗ {error}
+              </div>
             )}
           </div>
         </div>
