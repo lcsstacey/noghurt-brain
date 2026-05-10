@@ -69,5 +69,24 @@ export default async function PlayPage({ params }: PageProps) {
   // Render JoinForm. The role determines the is_host flag on insert; users
   // whose user.id matches room.host_id are creating their host seat.
   const role = user && user.id === room.host_id ? 'host' : 'player';
-  return <JoinForm code={code} role={role} />;
+
+  // If they came in via Discord OAuth, lift the username + avatar off the
+  // user metadata so JoinForm can pre-fill the callsign + show a
+  // "signed in as X" affordance. Anon users have no metadata to surface.
+  const isDiscord = user?.app_metadata?.provider === 'discord';
+  const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
+  const discordUser = isDiscord
+    ? {
+        name:
+          (meta.global_name as string | undefined) ||
+          (meta.full_name as string | undefined) ||
+          (meta.name as string | undefined) ||
+          (meta.user_name as string | undefined) ||
+          (meta.preferred_username as string | undefined) ||
+          'PLAYER',
+        avatarUrl: (meta.avatar_url as string | undefined) ?? null,
+      }
+    : null;
+
+  return <JoinForm code={code} role={role} discordUser={discordUser} />;
 }
