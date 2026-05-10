@@ -2,13 +2,14 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { getUser } from '@/lib/auth/getUser';
+import { pickRoundQuestions } from '@/data/questions';
 
 export type StartGameResult = { ok: true } | { ok: false; error: string };
 
 /**
- * Advance the room from lobby → intro by calling the advance_phase RPC.
- * The RPC enforces host-only via auth.uid() comparison; we still do an
- * upfront check so we can return a clean error.
+ * Host clicks INITIATE BROADCAST. Picks the round's questions deterministically
+ * from the room id, writes them to rooms.questions / rooms.mainframe_question_id,
+ * and advances the phase to `intro`.
  */
 export async function startGame(code: string): Promise<StartGameResult> {
   try {
@@ -32,12 +33,23 @@ export async function startGame(code: string): Promise<StartGameResult> {
       .select('id', { count: 'exact', head: true })
       .eq('room_id', room.id);
 
-    if ((count ?? 0) < 2) {
-      return { ok: false, error: 'need at least 2 players to start' };
-    }
+    if ((count ?? 0) < 2) return { ok: false, error: 'need at least 2 players to start' };
 
-    const { error } = await supabase.rpc('advance_phase', { p_room_id: room.id });
-    if (error) return { ok: false, error: error.message };
+    // Deterministic pick — same room id always picks the same set.
+    const { questions, mainframe } = pickRoundQuestions(room.id);
+
+    const { error: updateErr } = await supabase
+      .from('rooms')
+      .update({
+        questions: questions.map((q) => q.id),
+        mainframe_question_id: mainframe.id,
+      })
+      .eq('id', room.id);
+
+    if (updateErr) return { ok: false, error: updateErr.message };
+
+    const { error: rpcErr } = await supabase.rpc('advance_phase', { p_room_id: room.id });
+    if (rpcErr) return { ok: false, error: rpcErr.message };
 
     return { ok: true };
   } catch (e) {
