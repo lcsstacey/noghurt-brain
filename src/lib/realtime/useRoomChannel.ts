@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { Database } from '@/lib/database.types';
 
@@ -14,7 +14,11 @@ export type UseRoomChannelResult = {
   players: PlayerRow[];
   status: RoomChannelStatus;
   error: string | null;
+  /** Force-refresh room + players immediately (skip the poll wait). */
+  refetch: () => void;
 };
+
+const POLL_MS = 600;
 
 /**
  * Subscribes to a room by code. Returns the live room row and its players,
@@ -22,6 +26,13 @@ export type UseRoomChannelResult = {
  *
  * Both LobbyHost and LobbyPhone consume this; the difference is only which
  * surface they render. RLS hides answers/wagers from peers pre-reveal.
+ *
+ * Realtime postgres_changes is the primary signal. Polling at POLL_MS is
+ * a safety net for cases where realtime drops events (RLS race, JWT
+ * timing, mobile-tab-suspended quirks, connection limit). The interval
+ * is short enough that joins/setting changes feel near-instant even if
+ * realtime is silent. Both RPCs are tiny SECURITY DEFINER lookups so
+ * the load stays cheap.
  */
 export function useRoomChannel(code: string): UseRoomChannelResult {
   const [room, setRoom] = useState<Room | null>(null);
@@ -29,16 +40,14 @@ export function useRoomChannel(code: string): UseRoomChannelResult {
   const [status, setStatus] = useState<RoomChannelStatus>('loading');
   const [error, setError] = useState<string | null>(null);
   const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
+  const refetchRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     if (!supabaseRef.current) supabaseRef.current = createClient();
     const supabase = supabaseRef.current;
     let cancelled = false;
+    let currentRoomId: string | null = null;
 
-    // RPCs bypass RLS so the JoinForm (non-member) can also load room +
-    // player list. Realtime postgres_changes still respect RLS so
-    // non-members won't get live updates — fine because they become
-    // members on submit.
     async function fetchRoom() {
       const { data, error } = await supabase.rpc('find_room_by_code', {
         p_code: code.toUpperCase(),
@@ -66,12 +75,18 @@ export function useRoomChannel(code: string): UseRoomChannelResult {
       setPlayers(data ?? []);
     }
 
+    refetchRef.current = () => {
+      void fetchRoom();
+      if (currentRoomId) void fetchPlayers(currentRoomId);
+    };
+
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let pollHandle: ReturnType<typeof setInterval> | null = null;
 
     (async () => {
       const r = await fetchRoom();
       if (!r) return;
+      currentRoomId = r.id;
       await fetchPlayers(r.id);
 
       channel = supabase
@@ -96,15 +111,11 @@ export function useRoomChannel(code: string): UseRoomChannelResult {
           else if (s === 'CLOSED') setStatus('closed');
         });
 
-      // Polling fallback: if realtime drops events (RLS / JWT timing /
-      // mobile-tab-suspended quirks), this catches up within ~1.5s.
-      // Cheaper than longer intervals would suggest because both RPCs
-      // are tiny SECURITY DEFINER lookups.
       pollHandle = setInterval(() => {
         if (cancelled) return;
         void fetchRoom();
         void fetchPlayers(r.id);
-      }, 1500);
+      }, POLL_MS);
     })();
 
     return () => {
@@ -114,5 +125,7 @@ export function useRoomChannel(code: string): UseRoomChannelResult {
     };
   }, [code]);
 
-  return { room, players, status, error };
+  const refetch = useCallback(() => refetchRef.current(), []);
+
+  return { room, players, status, error, refetch };
 }

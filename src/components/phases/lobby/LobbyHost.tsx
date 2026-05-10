@@ -55,7 +55,7 @@ export function LobbyHost({
   meId,
   isHost = false,
 }: LobbyHostProps) {
-  const { room, players, status } = useRoomChannel(code);
+  const { room, players, status, refetch } = useRoomChannel(code);
   const { kickMode } = useHostAdmin();
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +99,9 @@ export function LobbyHost({
     if (!r.ok) {
       setError(r.error);
       setOptimistic(serverSettings);
+      return;
     }
+    refetch();
   };
 
   const setDifficulty = async (id: 'normal' | 'nightmare') => {
@@ -110,7 +112,9 @@ export function LobbyHost({
     if (!r.ok) {
       setError(r.error);
       setOptimistic(serverSettings);
+      return;
     }
+    refetch();
   };
 
   const setRounds = async (n: number) => {
@@ -123,7 +127,9 @@ export function LobbyHost({
     if (!r.ok) {
       setError(r.error);
       setOptimistic(serverSettings);
+      return;
     }
+    refetch();
   };
 
   useEffect(() => {
