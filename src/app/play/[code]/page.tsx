@@ -10,6 +10,38 @@ type PageProps = {
   params: Promise<{ code: string }>;
 };
 
+function CantJoin() {
+  return (
+    <main
+      className="min-h-screen flex items-center justify-center p-6"
+      style={{ backgroundColor: C.bg }}
+    >
+      <div className="font-pixel text-center" style={{ color: C.red }}>
+        <div className="text-2xl text-glow">GAME IN PROGRESS</div>
+        <div className="font-crt text-base text-zinc-500 mt-3">
+          This room can&apos;t be joined right now.
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function RoundInProgress() {
+  return (
+    <main
+      className="min-h-screen flex items-center justify-center p-6"
+      style={{ backgroundColor: C.bg }}
+    >
+      <div className="font-pixel text-center" style={{ color: C.cyan }}>
+        <div className="text-2xl text-glow">▸ ROUND IN PROGRESS</div>
+        <div className="font-crt text-base text-zinc-500 mt-3">
+          (Phase 3 wires up the question screens.)
+        </div>
+      </div>
+    </main>
+  );
+}
+
 export default async function PlayPage({ params }: PageProps) {
   const { code: rawCode } = await params;
   const code = rawCode.toUpperCase();
@@ -25,38 +57,32 @@ export default async function PlayPage({ params }: PageProps) {
 
   if (!room) notFound();
 
-  // Phase 4 will polish "game already in progress" messaging; for v1 lobby
-  // is the only joinable phase.
-  if (room.phase !== 'lobby') {
-    return (
-      <main
-        className="min-h-screen flex items-center justify-center p-6"
-        style={{ backgroundColor: C.bg }}
-      >
-        <div className="font-pixel text-center" style={{ color: C.red }}>
-          <div className="text-2xl text-glow">GAME IN PROGRESS</div>
-          <div className="font-crt text-base text-zinc-500 mt-3">
-            This room can&apos;t be joined right now.
-          </div>
-        </div>
-      </main>
-    );
+  // Authed callers might already be a player in this room — even mid-game.
+  // Check membership FIRST so existing players see their phone view (not
+  // the "can't join" message intended for fresh visitors).
+  const existing = user
+    ? (
+        await supabase
+          .from('players')
+          .select('id')
+          .eq('room_id', room.id)
+          .eq('user_id', user.id)
+          .maybeSingle()
+      ).data
+    : null;
+
+  if (existing) {
+    // Existing player. Phase 3 will switch on room.phase to render
+    // intro/question/reveal/etc. phone views; Phase 2 just shows lobby
+    // for `lobby` and a placeholder for everything else.
+    if (room.phase === 'lobby') {
+      return <LobbyPhone code={code} playerId={existing.id} />;
+    }
+    return <RoundInProgress />;
   }
 
-  if (!user) {
-    return <JoinForm code={code} role="player" />;
-  }
+  // Not yet a player. They can only join while phase=lobby.
+  if (room.phase !== 'lobby') return <CantJoin />;
 
-  const { data: existing } = await supabase
-    .from('players')
-    .select('id')
-    .eq('room_id', room.id)
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  if (!existing) {
-    return <JoinForm code={code} role="player" />;
-  }
-
-  return <LobbyPhone code={code} playerId={existing.id} />;
+  return <JoinForm code={code} role="player" />;
 }
