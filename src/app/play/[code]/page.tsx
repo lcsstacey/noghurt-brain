@@ -70,12 +70,16 @@ export default async function PlayPage({ params }: PageProps) {
   // whose user.id matches room.host_id are creating their host seat.
   const role = user && user.id === room.host_id ? 'host' : 'player';
 
-  // If they came in via Discord OAuth, lift the username + avatar off the
-  // user metadata so JoinForm can pre-fill the callsign + show a
-  // "signed in as X" affordance. Anon users have no metadata to surface.
-  const isDiscord = user?.app_metadata?.provider === 'discord';
-  const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
-  const discordUser = isDiscord
+  // If a Discord identity is attached (via signInWithOAuth OR linkIdentity
+  // on an anon account), surface its display name + avatar so JoinForm can
+  // pre-fill the callsign and show the connection banner.
+  //
+  // We read from user.identities[] rather than user.app_metadata.provider
+  // because a linked-anon user has app_metadata.provider='anonymous' even
+  // though Discord is fully authed alongside it.
+  const discordIdentity = user?.identities?.find((i) => i.provider === 'discord');
+  const meta = (discordIdentity?.identity_data ?? {}) as Record<string, unknown>;
+  const discordUser = discordIdentity
     ? {
         name:
           (meta.global_name as string | undefined) ||

@@ -269,8 +269,8 @@ export function LobbyHost({
           </div>
         </div>
 
-        {/* DIFFICULTY + ROUNDS stacked */}
-        <div className="space-y-4">
+        {/* DIFFICULTY (top) + RPG character placeholder (bottom) */}
+        <div className="space-y-4 flex flex-col">
           <div>
             <div className="font-pixel text-xs text-zinc-400 mb-3 flex items-center gap-2">
               <span style={{ color: C.yellow }}>▸</span>DIFFICULTY
@@ -301,38 +301,57 @@ export function LobbyHost({
             </div>
           </div>
 
-          <div>
-            <div className="font-pixel text-xs text-zinc-400 mb-3 flex items-center gap-2">
-              <span style={{ color: C.cyan }}>▸</span>ROUNDS
+          {/* Reserved space for v3 Quest-Mode character panel. */}
+          <div className="flex-1 border-2 border-dashed border-zinc-800 p-4 flex flex-col items-center justify-center text-center gap-2 min-h-[120px]">
+            <div className="font-pixel text-[9px] text-zinc-600">
+              ▸ CHARACTER LOADOUT
             </div>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setRounds(settings.rounds_count - 1)}
-                disabled={settings.rounds_count <= MIN_ROUNDS}
-                className="font-pixel text-lg w-10 h-10 border-2 border-zinc-600 hover:border-cyan-400 text-zinc-300 disabled:opacity-30"
-              >
-                −
-              </button>
-              <div
-                className="font-pixel text-3xl flex-1 text-center text-glow"
-                style={{ color: C.cyan }}
-              >
-                {settings.rounds_count}
-              </div>
-              <button
-                type="button"
-                onClick={() => setRounds(settings.rounds_count + 1)}
-                disabled={settings.rounds_count >= MAX_ROUNDS}
-                className="font-pixel text-lg w-10 h-10 border-2 border-zinc-600 hover:border-cyan-400 text-zinc-300 disabled:opacity-30"
-              >
-                +
-              </button>
+            <div
+              className="font-pixel text-[8px]"
+              style={{ color: C.purple }}
+            >
+              UNLOCKS IN QUEST MODE
             </div>
-            <div className="font-crt text-base mt-1.5 text-zinc-500 text-center">
-              {settings.rounds_count} normal + 1 MAINFRAME
+            <div className="font-crt text-base text-zinc-700 leading-tight px-2">
+              class abilities · gear · streak relics
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ROUNDS — centered full-width row at the bottom of the settings block. */}
+      <div
+        className={`flex flex-col items-center gap-2 mt-4 ${settingsLocked ? 'opacity-70 pointer-events-none' : ''}`}
+      >
+        <div className="font-pixel text-xs text-zinc-400 flex items-center gap-2">
+          <span style={{ color: C.cyan }}>▸</span>ROUNDS
+        </div>
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => setRounds(settings.rounds_count - 1)}
+            disabled={settings.rounds_count <= MIN_ROUNDS}
+            className="font-pixel text-xl w-12 h-12 border-2 border-zinc-600 hover:border-cyan-400 text-zinc-300 disabled:opacity-30"
+          >
+            −
+          </button>
+          <div
+            className="font-pixel text-5xl text-glow tabular-nums w-16 text-center"
+            style={{ color: C.cyan }}
+          >
+            {settings.rounds_count}
+          </div>
+          <button
+            type="button"
+            onClick={() => setRounds(settings.rounds_count + 1)}
+            disabled={settings.rounds_count >= MAX_ROUNDS}
+            className="font-pixel text-xl w-12 h-12 border-2 border-zinc-600 hover:border-cyan-400 text-zinc-300 disabled:opacity-30"
+          >
+            +
+          </button>
+        </div>
+        <div className="font-crt text-base text-zinc-500">
+          {settings.rounds_count} normal + 1 MAINFRAME
         </div>
       </div>
 
