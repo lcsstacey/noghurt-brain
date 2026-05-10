@@ -16,12 +16,18 @@ export const SONGS: Record<SongId, Song> = {
       [68,  N.A4, 1.0], [72, N.E5, 1.5], [78, N.D5, 0.5],
       [80,  N.C5, 1.0], [84, N.F5, 2.0], [92, N.E5, 1.0],
       [96,  N.D5, 0.5], [98, N.E5, 1.5], [104, N.C5, 0.5], [106, N.B4, 0.5], [110, N.Gs4, 0.5],
-      [112, N.A4, 2.0], [120, N.C5, 0.5], [122, N.B4, 0.5], [124, N.A4, 1.0],
+      [112, N.A4, 2.0], [120, N.C5, 0.5], [122, N.B4, 0.5],
+      // Final note extended past the 8-bar loop boundary so it crossfades
+      // naturally with bar 1's attack on the next iteration.
+      [124, N.A4, 3.0],
     ]),
     counter: melodyDict([
       [16, N.A3, 2.0],
       [40, N.C4, 2.0],
       [56, N.E4, 1.0], [60, N.G4, 1.0],
+      // Loop-pickup: soft E4 + A3 in the last half-beat resolve into
+      // bar 1's Am chord, bridging the loop seam.
+      [126, N.E4, 1.0], [127, N.A3, 1.5],
     ]),
   },
 
@@ -38,12 +44,16 @@ export const SONGS: Record<SongId, Song> = {
       [64, N.A4, 0.5], [66, N.D5, 0.5], [68, N.F5, 1.0], [72, N.E5, 0.5], [74, N.D5, 1.0],
       [80, N.G5, 0.5], [82, N.F5, 0.5], [84, N.Eb5, 0.5], [86, N.D5, 1.5],
       [96, N.Cs5, 0.5], [98, N.E5, 0.5], [100, N.D5, 0.5], [102, N.Cs5, 1.0], [108, N.A4, 1.0],
+      // Held A4 → Cs5 (leading-tone) → bridges into Dm of next loop.
       [112, N.A4, 2.0],
+      [124, N.Cs5, 0.5], [126, N.A4, 2.5],
     ]),
     counter: melodyDict([
       [0,  N.D4, 4.0],
       [32, N.Cs4, 2.0],
       [56, N.D5, 1.0], [60, N.A4, 1.0],
+      // Loop-pickup tension: held A3 over A7 → resolves to D drone of bar 1
+      [120, N.A3, 2.5],
     ]),
   },
 
@@ -62,13 +72,17 @@ export const SONGS: Record<SongId, Song> = {
       [88, N.A5, 0.5], [90, N.G5, 0.5], [92, N.F5, 1.0],
       [96, N.D5, 0.5], [98, N.G5, 0.5], [100, N.D5, 0.5], [102, N.G5, 0.5],
       [104, N.D5, 1.0], [108, N.G4, 1.0],
-      [112, N.C5, 0.5], [114, N.E5, 0.5], [116, N.G5, 0.5], [118, N.C6, 2.0],
+      [112, N.C5, 0.5], [114, N.E5, 0.5], [116, N.G5, 0.5],
+      // Sustained C6 extended past loop boundary so it bleeds into bar 1.
+      [118, N.C6, 3.0],
     ]),
     counter: melodyDict([
       [0,  N.G4, 0.5], [4,  N.G4, 0.5], [8,  N.G4, 0.5], [12, N.G4, 0.5],
       [16, N.A4, 0.5], [20, N.A4, 0.5], [24, N.A4, 0.5], [28, N.A4, 0.5],
       [32, N.B4, 0.5], [36, N.B4, 0.5], [40, N.B4, 0.5], [44, N.D5, 0.5],
       [48, N.E5, 1.0], [52, N.G5, 1.0], [56, N.C5, 1.0], [60, N.G4, 1.0],
+      // Loop-pickup: G4 → C5 walk into bar 1's C major.
+      [124, N.G4, 0.5], [126, N.C5, 1.5],
     ]),
   },
 
@@ -85,7 +99,9 @@ export const SONGS: Record<SongId, Song> = {
       [66, N.F4, 1.5], [72, N.A4, 2.0],
       [80, N.E5, 2.0], [88, N.G5, 1.5], [94, N.E5, 0.5],
       [98, N.D5, 1.5], [104, N.B4, 1.0], [108, N.D5, 1.0],
-      [112, N.A4, 4.0],
+      // Sustained A4 whole-note resolution, extended past the loop so the
+      // sine tail bleeds into the next iteration's heartbeat kick.
+      [112, N.A4, 5.0],
     ]),
     counter: melodyDict([
       [16, N.E4, 4.0],
@@ -115,8 +131,9 @@ export const SONGS: Record<SongId, Song> = {
       // Bar 7 (G): G4-B4-D5 ascending hook
       [96, N.G4, 0.5], [98, N.B4, 0.5], [100, N.D5, 1.0],
       [104, N.B4, 0.5], [106, N.D5, 0.5], [108, N.G4, 1.0],
-      // Bar 8 (Am): resolve down to A4
-      [112, N.E5, 1.0], [116, N.C5, 1.0], [120, N.A4, 2.0],
+      // Bar 8 (Am): resolve down to A4 — extended past loop boundary
+      // so the lead bleeds into bar 1's Am attack on the next iteration.
+      [112, N.E5, 1.0], [116, N.C5, 1.0], [120, N.A4, 3.5],
     ]),
     counter: melodyDict([
       // Bars 1-4: rising 4-bar pickup, one note per bar
@@ -124,6 +141,8 @@ export const SONGS: Record<SongId, Song> = {
       [16, N.C4, 4.0],   // bar 2 (over F)
       [32, N.E4, 4.0],   // bar 3 (over C)
       [48, N.G4, 2.0], [56, N.B4, 2.0],  // bar 4 (over G) — leading-tone walk into bar 5
+      // Loop-pickup: gentle E4 → A3 walk into bar 1.
+      [126, N.E4, 1.0], [127, N.A3, 1.5],
     ]),
   },
 
@@ -151,14 +170,17 @@ export const SONGS: Record<SongId, Song> = {
       // Bar 7 (E): G#-E-B leading-tone, dwell on B4
       [96, N.Gs4, 0.5], [98, N.B4, 0.5], [100, N.E5, 1.0],
       [104, N.B4, 0.5], [106, N.Gs4, 0.5], [108, N.E4, 1.0],
-      // Bar 8 (A7): G descending to E — unresolved
-      [112, N.G4, 0.5], [114, N.E4, 0.5], [116, N.Cs4, 0.5], [118, N.A3, 1.5],
+      // Bar 8 (A7): G → E → C# → A descending pickup, last note extended
+      // past loop boundary as a held A3 → bleeds into Am of next loop.
+      [112, N.G4, 0.5], [114, N.E4, 0.5], [116, N.Cs4, 0.5], [118, N.A3, 3.0],
     ]),
     counter: melodyDict([
       [0,  N.A3, 4.0],    // bar 1: drone A3
       [16, N.Bb3, 2.0],   // bar 2: chromatic Bb tension
       [32, N.Gs3, 2.0],   // bar 3: leading tone
       [48, N.A3, 1.0], [52, N.E4, 1.0],  // bar 4: pickup before main melody
+      // Loop-pickup: tense Cs4 → E4 leading tone over A7 → resolves to A3 drone of bar 1.
+      [124, N.Cs4, 0.5], [126, N.E4, 1.5],
     ]),
   },
 };
