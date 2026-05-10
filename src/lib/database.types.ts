@@ -39,6 +39,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      answers: {
+        Row: {
+          answer: Json
+          id: string
+          is_correct: boolean | null
+          locked_at: string
+          player_id: string
+          points_awarded: number | null
+          question_id: string
+          room_id: string
+        }
+        Insert: {
+          answer: Json
+          id?: string
+          is_correct?: boolean | null
+          locked_at?: string
+          player_id: string
+          points_awarded?: number | null
+          question_id: string
+          room_id: string
+        }
+        Update: {
+          answer?: Json
+          id?: string
+          is_correct?: boolean | null
+          locked_at?: string
+          player_id?: string
+          points_awarded?: number | null
+          question_id?: string
+          room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "answers_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "answers_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       players: {
         Row: {
           color: string
@@ -119,6 +167,48 @@ export type Database = {
         }
         Relationships: []
       }
+      wagers: {
+        Row: {
+          amount: number
+          id: string
+          locked_at: string
+          pct: number
+          player_id: string
+          room_id: string
+        }
+        Insert: {
+          amount: number
+          id?: string
+          locked_at?: string
+          pct: number
+          player_id: string
+          room_id: string
+        }
+        Update: {
+          amount?: number
+          id?: string
+          locked_at?: string
+          pct?: number
+          player_id?: string
+          room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wagers_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wagers_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -144,6 +234,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      apply_grading: {
+        Args: { p_grading: Json; p_room_id: string }
+        Returns: undefined
+      }
       find_room_by_code: {
         Args: { p_code: string }
         Returns: {
@@ -166,6 +260,25 @@ export type Database = {
       }
       is_room_host: { Args: { p_room_id: string }; Returns: boolean }
       is_room_member: { Args: { p_room_id: string }; Returns: boolean }
+      list_room_answers: {
+        Args: { p_question_id: string; p_room_id: string }
+        Returns: {
+          answer: Json
+          id: string
+          is_correct: boolean | null
+          locked_at: string
+          player_id: string
+          points_awarded: number | null
+          question_id: string
+          room_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "answers"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       list_room_players: {
         Args: { p_room_id: string }
         Returns: {
@@ -186,6 +299,49 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      list_room_wagers: {
+        Args: { p_room_id: string }
+        Returns: {
+          amount: number
+          id: string
+          locked_at: string
+          pct: number
+          player_id: string
+          room_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "wagers"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      my_player_id: { Args: { p_room_id: string }; Returns: string }
+      reset_room: {
+        Args: { p_room_id: string }
+        Returns: {
+          code: string
+          created_at: string
+          current_question_idx: number
+          host_id: string
+          id: string
+          mainframe_question_id: string | null
+          phase: string
+          question_started_at: string | null
+          questions: Json
+        }
+        SetofOptions: {
+          from: "*"
+          to: "rooms"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      room_at_or_past_final_reveal: {
+        Args: { p_room_id: string }
+        Returns: boolean
+      }
+      room_past_question: { Args: { p_room_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
