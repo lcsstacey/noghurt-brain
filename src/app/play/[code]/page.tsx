@@ -60,7 +60,14 @@ export default async function PlayPage({ params }: PageProps) {
       headerList.get('origin') ??
       `https://${headerList.get('host') ?? 'noghurt-brain.vercel.app'}`;
     const joinUrl = `${origin}/play/${code}`;
-    return <UnifiedView code={code} playerId={existing.id} joinUrl={joinUrl} />;
+    return (
+      <UnifiedView
+        code={code}
+        playerId={existing.id}
+        userId={user!.id}
+        joinUrl={joinUrl}
+      />
+    );
   }
 
   // No player row yet. Lobby joinable; mid-game = blocked for newcomers.

@@ -188,14 +188,14 @@ export function LobbyHost({
         </div>
       </div>
 
-      {/* Player grid */}
+      {/* Player grid + ROUNDS stepper inline (right of the 8th slot). */}
       <div>
         <div className="font-pixel text-xs text-zinc-400 mb-3 flex items-center gap-2">
           <span style={{ color: C.green }}>▸</span>
           PLAYERS CONNECTED{' '}
           <span style={{ color: C.green }}>[{players.length}/8]</span>
         </div>
-        <div className="flex flex-wrap gap-5">
+        <div className="flex flex-wrap gap-5 items-start">
           {players.map((p, i) => {
             const player = toPlayer(p);
             const isMe = meId === p.id;
@@ -229,6 +229,46 @@ export function LobbyHost({
               <div className="font-pixel text-[9px] text-zinc-600">EMPTY</div>
             </div>
           ))}
+
+          {/* ROUNDS stepper sits right of the 8th slot with a small gap. */}
+          <div
+            className={`ml-2 flex flex-col items-center justify-center gap-1.5 px-3 ${
+              settingsLocked ? 'opacity-70 pointer-events-none' : ''
+            }`}
+          >
+            <div className="font-pixel text-[9px] text-zinc-500 flex items-center gap-1">
+              <span style={{ color: C.cyan }}>▸</span>ROUNDS
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setRounds(settings.rounds_count - 1)}
+                disabled={settings.rounds_count <= MIN_ROUNDS}
+                aria-label="Decrease rounds"
+                className="font-pixel text-base w-7 h-7 border-2 border-zinc-700 hover:border-cyan-400 text-zinc-300 disabled:opacity-30 disabled:hover:border-zinc-700"
+              >
+                −
+              </button>
+              <div
+                className="font-pixel text-3xl text-glow tabular-nums w-9 text-center leading-none"
+                style={{ color: C.cyan }}
+              >
+                {settings.rounds_count}
+              </div>
+              <button
+                type="button"
+                onClick={() => setRounds(settings.rounds_count + 1)}
+                disabled={settings.rounds_count >= MAX_ROUNDS}
+                aria-label="Increase rounds"
+                className="font-pixel text-base w-7 h-7 border-2 border-zinc-700 hover:border-cyan-400 text-zinc-300 disabled:opacity-30 disabled:hover:border-zinc-700"
+              >
+                +
+              </button>
+            </div>
+            <div className="font-crt text-xs text-zinc-500 leading-none">
+              + 1 MAINFRAME
+            </div>
+          </div>
         </div>
       </div>
 
@@ -316,42 +356,6 @@ export function LobbyHost({
               class abilities · gear · streak relics
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* ROUNDS — centered full-width row at the bottom of the settings block. */}
-      <div
-        className={`flex flex-col items-center gap-2 mt-4 ${settingsLocked ? 'opacity-70 pointer-events-none' : ''}`}
-      >
-        <div className="font-pixel text-xs text-zinc-400 flex items-center gap-2">
-          <span style={{ color: C.cyan }}>▸</span>ROUNDS
-        </div>
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => setRounds(settings.rounds_count - 1)}
-            disabled={settings.rounds_count <= MIN_ROUNDS}
-            className="font-pixel text-xl w-12 h-12 border-2 border-zinc-600 hover:border-cyan-400 text-zinc-300 disabled:opacity-30"
-          >
-            −
-          </button>
-          <div
-            className="font-pixel text-5xl text-glow tabular-nums w-16 text-center"
-            style={{ color: C.cyan }}
-          >
-            {settings.rounds_count}
-          </div>
-          <button
-            type="button"
-            onClick={() => setRounds(settings.rounds_count + 1)}
-            disabled={settings.rounds_count >= MAX_ROUNDS}
-            className="font-pixel text-xl w-12 h-12 border-2 border-zinc-600 hover:border-cyan-400 text-zinc-300 disabled:opacity-30"
-          >
-            +
-          </button>
-        </div>
-        <div className="font-crt text-base text-zinc-500">
-          {settings.rounds_count} normal + 1 MAINFRAME
         </div>
       </div>
 

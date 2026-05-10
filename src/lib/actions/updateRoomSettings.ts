@@ -64,6 +64,18 @@ export async function updateRoomSettings(
       .eq('id', room.id);
 
     if (error) return { ok: false, error: error.message };
+
+    // Self-heal: stale player rows from earlier auth-id drift can have
+    // is_host=false even when room.host_id matches the caller. Bring the
+    // host's player row in sync so anything still reading player.is_host
+    // (e.g. avatar badges) renders correctly.
+    await supabase
+      .from('players')
+      .update({ is_host: true })
+      .eq('room_id', room.id)
+      .eq('user_id', user.id)
+      .eq('is_host', false);
+
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'unknown error' };

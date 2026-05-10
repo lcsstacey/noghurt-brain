@@ -31,6 +31,7 @@ type PlayerRow = Database['public']['Tables']['players']['Row'];
 type Props = {
   code: string;
   playerId: string;
+  userId: string;
   joinUrl: string;
 };
 
@@ -41,7 +42,7 @@ type Props = {
  *
  * Replaces the previous HostPhaseRouter + PhonePhaseRouter split.
  */
-export function UnifiedView({ code, playerId, joinUrl }: Props) {
+export function UnifiedView({ code, playerId, userId, joinUrl }: Props) {
   const { room, players } = useRoomChannel(code);
   const me = players.find((p) => p.id === playerId);
 
@@ -66,7 +67,11 @@ export function UnifiedView({ code, playerId, joinUrl }: Props) {
   // (We could router.refresh() here but the deletion already triggered a
   // re-render; the player is just gone from `players`.)
 
-  const isHost = me.is_host;
+  // Auth-uid match is the source of truth for host privileges (matches what
+  // updateRoomSettings / kickPlayer / etc. validate on the server). Stale
+  // player.is_host columns can drift after Discord OAuth flows; trusting
+  // room.host_id keeps the UI in sync with what the server will accept.
+  const isHost = room.host_id === userId;
 
   return (
     <HostAdminProvider>
@@ -180,7 +185,7 @@ function TvViewForPhase({
         <QuestionHost
           code={code}
           isHost={isHost}
-          hostPlayerId={me.id}
+          me={me}
           questionId={currentNormalId}
           roundIndex={room.current_question_idx}
           totalRounds={totalRounds}
@@ -210,7 +215,7 @@ function TvViewForPhase({
         <QuestionHost
           code={code}
           isHost={isHost}
-          hostPlayerId={me.id}
+          me={me}
           questionId={room.mainframe_question_id ?? ''}
           roundIndex={(room.questions as string[]).length}
           totalRounds={totalRounds}

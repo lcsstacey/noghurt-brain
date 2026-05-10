@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Flame, Lock } from 'lucide-react';
+import { Flame } from 'lucide-react';
 import { C } from '@/styles/palette';
 import { PlayerAvatar } from '@/components/shared/PlayerAvatar';
 import { TimerBar } from '@/components/shared/TimerBar';
@@ -15,16 +15,17 @@ import { hostGradeAndAdvance } from '@/lib/actions/hostGradeAndAdvance';
 import { submitAnswer } from '@/lib/actions/submitAnswer';
 import { toPlayer } from '@/lib/game/colorIcon';
 import { ClassicHostBody } from './ClassicHostBody';
-import { ClassicPhoneBody } from './ClassicPhoneBody';
 import { DecryptorHostBody } from './DecryptorHostBody';
-import { DecryptorPhoneBody } from './DecryptorPhoneBody';
 import { createClient } from '@/lib/supabase/client';
+import type { Database } from '@/lib/database.types';
+
+type PlayerRow = Database['public']['Tables']['players']['Row'];
 
 type QuestionHostProps = {
   code: string;
   isHost: boolean;
-  /** The host's own player_id, so they can answer alongside everyone else. */
-  hostPlayerId?: string;
+  /** The current viewer's player row — used for lock-in + identity badge. */
+  me: PlayerRow;
   questionId: string;
   roundIndex: number;
   totalRounds: number;
@@ -33,14 +34,15 @@ type QuestionHostProps = {
 };
 
 /**
- * Host's full question screen. Reads server-stamped started_at, drives
- * the timer, and (if isHost) calls hostGradeAndAdvance when timer expires
- * OR all players have locked in.
+ * Desktop "TV" question screen — same UI for hosts and guests. Both tap
+ * the four cards (Classic) or type into the input (Decryptor) to lock in.
+ * Host privileges (advancing phase, kick mode, etc.) live in the floating
+ * <HostAdminBar />. The "(HOST)" badge top-right is purely a label.
  */
 export function QuestionHost({
   code,
   isHost,
-  hostPlayerId,
+  me,
   questionId,
   roundIndex,
   totalRounds,
@@ -50,8 +52,8 @@ export function QuestionHost({
   const router = useRouter();
   const advanced = useRef(false);
   const { players, room } = useRoomChannel(code);
-  const [hostLocked, setHostLocked] = useState(false);
-  const [hostError, setHostError] = useState<string | null>(null);
+  const [myAnswer, setMyAnswer] = useState<number | string | null>(null);
+  const [lockError, setLockError] = useState<string | null>(null);
 
   const difficulty = (room?.settings as RoomSettings | undefined)?.difficulty;
   const totalSec = questionDuration(difficulty, final);
@@ -115,32 +117,35 @@ export function QuestionHost({
     return () => clearTimeout(id);
   }, [isExpired, players, isHost, code, questionId, router]);
 
-  // Detect host's own existing answer so a reload doesn't show the input again.
+  // Detect existing answer for this player (e.g. on reload).
   useEffect(() => {
-    if (!hostPlayerId) return;
     let cancelled = false;
     supabase.current
       .from('answers')
-      .select('id')
-      .eq('player_id', hostPlayerId)
+      .select('answer')
+      .eq('player_id', me.id)
       .eq('question_id', questionId)
       .maybeSingle()
       .then(({ data }) => {
-        if (!cancelled && data) setHostLocked(true);
+        if (!cancelled && data) {
+          const a = data.answer as number | string;
+          setMyAnswer(a);
+        }
       });
     return () => {
       cancelled = true;
     };
-  }, [hostPlayerId, questionId]);
+  }, [me.id, questionId]);
 
-  const handleHostLock = async (answer: number | string) => {
-    setHostError(null);
+  const handleLock = async (answer: number | string) => {
+    setLockError(null);
+    // Optimistic — feels instant, server rejection rolls back.
+    setMyAnswer(answer);
     const result = await submitAnswer({ code, questionId, answer });
     if (!result.ok) {
-      setHostError(result.error);
-      return;
+      setLockError(result.error);
+      setMyAnswer(null);
     }
-    setHostLocked(true);
   };
 
   const question = QUESTIONS_BY_ID[questionId];
@@ -150,10 +155,11 @@ export function QuestionHost({
   const lockedCount = players.filter((p) => lockedRef.current.has(p.id)).length;
   const timerColor =
     secondsLeft < totalSec * 0.25 ? C.red : secondsLeft < totalSec * 0.5 ? C.yellow : C.green;
+  const meColor = C[toPlayer(me).color];
 
   return (
     <div className="flex flex-col h-full gap-4">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <Icon size={20} style={{ color: cat.color }} />
           <div className="font-pixel text-xs" style={{ color: cat.color }}>
@@ -163,10 +169,20 @@ export function QuestionHost({
             <div className="font-pixel text-xs px-2 py-1 mainframe-bg text-black">★ MAINFRAME ★</div>
           )}
         </div>
-        <div className="font-pixel text-xs text-zinc-400">
-          ROUND <span style={{ color: C.cyan }}>{roundIndex + 1}</span>
-          <span className="text-zinc-700 mx-1">/</span>
-          {totalRounds}
+        <div className="flex flex-col items-end gap-0.5 leading-none">
+          <div className="font-pixel text-sm text-glow-soft" style={{ color: meColor }}>
+            {me.name}
+          </div>
+          {isHost && (
+            <div className="font-pixel text-[9px]" style={{ color: C.purple }}>
+              (HOST)
+            </div>
+          )}
+          <div className="font-pixel text-xs text-zinc-400 mt-1">
+            ROUND <span style={{ color: C.cyan }}>{roundIndex + 1}</span>
+            <span className="text-zinc-700 mx-1">/</span>
+            {totalRounds}
+          </div>
         </div>
       </div>
 
@@ -187,47 +203,30 @@ export function QuestionHost({
       </div>
 
       <div>
-        {question.type === 'classic' && <ClassicHostBody q={question} />}
+        {question.type === 'classic' && (
+          <ClassicHostBody
+            q={question}
+            onLock={handleLock}
+            myAnswer={typeof myAnswer === 'number' ? myAnswer : null}
+            disabled={isExpired}
+          />
+        )}
         {question.type === 'decryptor' && (
-          <DecryptorHostBody q={question} secondsLeft={secondsLeft} totalSec={totalSec} />
+          <DecryptorHostBody
+            q={question}
+            secondsLeft={secondsLeft}
+            totalSec={totalSec}
+            onLock={handleLock}
+            myAnswer={typeof myAnswer === 'string' ? myAnswer : null}
+            disabled={isExpired}
+          />
+        )}
+        {lockError && (
+          <div className="font-pixel text-xs text-center mt-2" style={{ color: C.red }}>
+            ✗ {lockError}
+          </div>
         )}
       </div>
-
-      {/* Host plays too — gets their own answer interface below the TV display. */}
-      {isHost && hostPlayerId && !hostLocked && (
-        <div
-          className="mt-3 p-3 border-2 rounded"
-          style={{ borderColor: C.cyan + '88', background: '#000' }}
-        >
-          <div className="font-pixel text-[10px] text-zinc-400 mb-2 flex items-center gap-2">
-            <Lock size={10} style={{ color: C.cyan }} />
-            <span>YOUR ANSWER (HOST)</span>
-          </div>
-          {question.type === 'classic' && (
-            <ClassicPhoneBody q={question} onLock={handleHostLock} />
-          )}
-          {question.type === 'decryptor' && (
-            <DecryptorPhoneBody onLock={handleHostLock} />
-          )}
-          {hostError && (
-            <div className="font-pixel text-xs text-center mt-2" style={{ color: C.red }}>
-              ✗ {hostError}
-            </div>
-          )}
-        </div>
-      )}
-
-      {isHost && hostLocked && (
-        <div
-          className="mt-3 p-3 border-2 rounded text-center"
-          style={{ borderColor: C.green, background: 'rgba(57,255,20,0.06)' }}
-        >
-          <div className="font-pixel text-xs flex items-center justify-center gap-2" style={{ color: C.green }}>
-            <Lock size={12} />
-            HOST LOCKED IN — awaiting other players
-          </div>
-        </div>
-      )}
 
       <div className="mt-2 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex gap-3">
