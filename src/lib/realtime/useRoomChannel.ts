@@ -67,6 +67,7 @@ export function useRoomChannel(code: string): UseRoomChannelResult {
     }
 
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let pollHandle: ReturnType<typeof setInterval> | null = null;
 
     (async () => {
       const r = await fetchRoom();
@@ -94,11 +95,22 @@ export function useRoomChannel(code: string): UseRoomChannelResult {
           else if (s === 'CHANNEL_ERROR' || s === 'TIMED_OUT') setStatus('error');
           else if (s === 'CLOSED') setStatus('closed');
         });
+
+      // Polling fallback: if realtime drops events (RLS / JWT timing /
+      // mobile-tab-suspended quirks), this catches up within 3s. Cheap
+      // — two RPCs every 3s — and dramatically improves perceived
+      // reliability for the lobby player list especially.
+      pollHandle = setInterval(() => {
+        if (cancelled) return;
+        void fetchRoom();
+        void fetchPlayers(r.id);
+      }, 3000);
     })();
 
     return () => {
       cancelled = true;
       if (channel) supabase.removeChannel(channel);
+      if (pollHandle) clearInterval(pollHandle);
     };
   }, [code]);
 

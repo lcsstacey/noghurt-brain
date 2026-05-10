@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Lock } from 'lucide-react';
 import { C } from '@/styles/palette';
 import { PlayerAvatar } from '@/components/shared/PlayerAvatar';
 import { TimerBar } from '@/components/shared/TimerBar';
@@ -10,6 +11,7 @@ import { QUESTIONS_BY_ID } from '@/data/questions';
 import { useRoomChannel } from '@/lib/realtime/useRoomChannel';
 import { useQuestionTimer, PHASE_DURATION_SEC, PHASE_ADVANCE_MS } from '@/lib/game/useQuestionTimer';
 import { hostAdvance } from '@/lib/actions/hostAdvance';
+import { submitWager } from '@/lib/actions/submitWager';
 import { toPlayer } from '@/lib/game/colorIcon';
 import { createClient } from '@/lib/supabase/client';
 import type { Database } from '@/lib/database.types';
@@ -19,11 +21,13 @@ type WagerRow = Database['public']['Tables']['wagers']['Row'];
 type Props = {
   code: string;
   isHost: boolean;
+  /** Host's own player_id so they can wager too. */
+  hostPlayerId?: string;
   mainframeQuestionId: string;
   startedAt: string | null;
 };
 
-export function WagerHost({ code, isHost, mainframeQuestionId, startedAt }: Props) {
+export function WagerHost({ code, isHost, hostPlayerId, mainframeQuestionId, startedAt }: Props) {
   const router = useRouter();
   const advanced = useRef(false);
   const { players } = useRoomChannel(code);
@@ -83,6 +87,11 @@ export function WagerHost({ code, isHost, mainframeQuestionId, startedAt }: Prop
   const cat = CATEGORIES[question.cat];
   const Icon = cat.Icon;
   const wagerByPlayer = new Map(wagers.map((w) => [w.player_id, w]));
+
+  // Inline host wager picker.
+  const hostPlayer = hostPlayerId ? players.find((p) => p.id === hostPlayerId) : null;
+  const hostWager = hostPlayerId ? wagerByPlayer.get(hostPlayerId) : null;
+  const hostMax = hostPlayer ? Math.max(100, hostPlayer.score) : 100;
 
   return (
     <div className="flex flex-col h-full gap-4">
@@ -162,6 +171,91 @@ export function WagerHost({ code, isHost, mainframeQuestionId, startedAt }: Prop
           );
         })}
       </div>
+
+      {/* Host wager picker — host plays too. */}
+      {isHost && hostPlayer && !hostWager && (
+        <HostWagerPicker code={code} max={hostMax} score={hostPlayer.score} />
+      )}
+      {isHost && hostWager && (
+        <div
+          className="p-3 border-2 rounded text-center"
+          style={{ borderColor: C.yellow, background: `${C.yellow}11` }}
+        >
+          <div className="font-pixel text-xs flex items-center justify-center gap-2" style={{ color: C.yellow }}>
+            <Lock size={12} /> HOST WAGERED <span className="text-glow">{hostWager.amount}</span> — awaiting question
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HostWagerPicker({ code, max, score }: { code: string; max: number; score: number }) {
+  const [val, setVal] = useState(Math.max(0, Math.floor(score * 0.5)));
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleLock = async () => {
+    setError(null);
+    setSubmitting(true);
+    const cap = Math.min(val, score);
+    const r = await submitWager(code, cap);
+    if (!r.ok) {
+      setError(r.error);
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="p-3 border-2 rounded space-y-2" style={{ borderColor: C.yellow + '88', background: '#000' }}>
+      <div className="font-pixel text-[10px] text-zinc-400 flex items-center gap-2">
+        <Lock size={10} style={{ color: C.yellow }} />
+        <span>YOUR WAGER (HOST) · SCORE {score.toLocaleString()}</span>
+      </div>
+      <div className="flex items-center gap-3">
+        <input
+          type="range"
+          min={0}
+          max={max}
+          value={val}
+          onChange={(e) => setVal(parseInt(e.target.value))}
+          className="flex-1 accent-yellow-400"
+          disabled={submitting}
+        />
+        <div className="font-pixel text-lg tabular-nums w-20 text-right text-glow" style={{ color: C.yellow }}>
+          {val.toLocaleString()}
+        </div>
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        {([0.25, 0.5, 1] as const).map((f) => (
+          <button
+            key={f}
+            type="button"
+            onClick={() => setVal(Math.max(0, Math.floor(max * f)))}
+            disabled={submitting}
+            className="btn-3d font-pixel text-[9px] py-2"
+            style={{ color: f === 1 ? C.red : C.cyan, background: '#0a0a0a' }}
+          >
+            {f === 1 ? 'ALL IN' : f === 0.5 ? 'HALF' : 'QTR'}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={handleLock}
+          disabled={submitting}
+          className="btn-3d font-pixel text-[9px] py-2"
+          style={{ color: C.yellow, background: '#0a0a0a' }}
+        >
+          <span className="flex items-center justify-center gap-1">
+            <Lock size={10} /> {submitting ? 'LOCKING…' : 'LOCK'}
+          </span>
+        </button>
+      </div>
+      {error && (
+        <div className="font-pixel text-xs text-center" style={{ color: C.red }}>
+          ✗ {error}
+        </div>
+      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { ChevronRight, KeyRound, Power, Radio, X } from 'lucide-react';
 import { C } from '@/styles/palette';
 import { createRoom } from '@/lib/actions/createRoom';
 import { normalizeCode } from '@/lib/game/code';
+import { MusicController } from '@/components/shared/MusicController';
 
 export default function LandingPage() {
   const router = useRouter();
@@ -154,6 +155,8 @@ export default function LandingPage() {
           <span>© 2026 NOGHURT BRAIN · v0.1.0</span>
         </div>
       </div>
+
+      <MusicController phase="menu" />
     </main>
   );
 }

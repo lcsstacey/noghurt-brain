@@ -16,6 +16,7 @@ import type { GamePhase } from '@/lib/audio/songs';
 type Props = {
   code: string;
   isHost: boolean;
+  hostPlayerId?: string;
   joinUrl: string;
 };
 
@@ -24,7 +25,7 @@ type Props = {
  * phase-appropriate host view. Centralizing here means realtime phase
  * changes propagate instantly without router.refresh round-trips.
  */
-export function HostPhaseRouter({ code, isHost, joinUrl }: Props) {
+export function HostPhaseRouter({ code, isHost, hostPlayerId, joinUrl }: Props) {
   const { room } = useRoomChannel(code);
 
   if (!room) {
@@ -59,6 +60,7 @@ export function HostPhaseRouter({ code, isHost, joinUrl }: Props) {
         <QuestionHost
           code={code}
           isHost={isHost}
+          hostPlayerId={hostPlayerId}
           questionId={currentNormalId}
           roundIndex={room.current_question_idx}
           totalRounds={totalRounds}
@@ -77,6 +79,7 @@ export function HostPhaseRouter({ code, isHost, joinUrl }: Props) {
         <WagerHost
           code={code}
           isHost={isHost}
+          hostPlayerId={hostPlayerId}
           mainframeQuestionId={room.mainframe_question_id ?? ''}
           startedAt={room.question_started_at}
         />
@@ -87,6 +90,7 @@ export function HostPhaseRouter({ code, isHost, joinUrl }: Props) {
         <QuestionHost
           code={code}
           isHost={isHost}
+          hostPlayerId={hostPlayerId}
           questionId={room.mainframe_question_id ?? ''}
           roundIndex={(room.questions as string[]).length}
           totalRounds={totalRounds}

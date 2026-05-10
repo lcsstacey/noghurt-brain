@@ -51,5 +51,5 @@ export default async function HostPage({ params }: PageProps) {
     headerList.get('origin') ?? `https://${headerList.get('host') ?? 'noghurt-brain.vercel.app'}`;
   const joinUrl = `${origin}/play/${code}`;
 
-  return <HostPhaseRouter code={code} isHost joinUrl={joinUrl} />;
+  return <HostPhaseRouter code={code} isHost hostPlayerId={existing.id} joinUrl={joinUrl} />;
 }

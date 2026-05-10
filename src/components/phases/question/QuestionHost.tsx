@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Flame } from 'lucide-react';
+import { Flame, Lock } from 'lucide-react';
 import { C } from '@/styles/palette';
 import { PlayerAvatar } from '@/components/shared/PlayerAvatar';
 import { TimerBar } from '@/components/shared/TimerBar';
@@ -11,14 +11,19 @@ import { QUESTIONS_BY_ID } from '@/data/questions';
 import { useRoomChannel } from '@/lib/realtime/useRoomChannel';
 import { useQuestionTimer, PHASE_DURATION_SEC, PHASE_ADVANCE_MS } from '@/lib/game/useQuestionTimer';
 import { hostGradeAndAdvance } from '@/lib/actions/hostGradeAndAdvance';
+import { submitAnswer } from '@/lib/actions/submitAnswer';
 import { toPlayer } from '@/lib/game/colorIcon';
 import { ClassicHostBody } from './ClassicHostBody';
+import { ClassicPhoneBody } from './ClassicPhoneBody';
 import { DecryptorHostBody } from './DecryptorHostBody';
+import { DecryptorPhoneBody } from './DecryptorPhoneBody';
 import { createClient } from '@/lib/supabase/client';
 
 type QuestionHostProps = {
   code: string;
   isHost: boolean;
+  /** The host's own player_id, so they can answer alongside everyone else. */
+  hostPlayerId?: string;
   questionId: string;
   roundIndex: number;
   totalRounds: number;
@@ -34,6 +39,7 @@ type QuestionHostProps = {
 export function QuestionHost({
   code,
   isHost,
+  hostPlayerId,
   questionId,
   roundIndex,
   totalRounds,
@@ -43,6 +49,8 @@ export function QuestionHost({
   const router = useRouter();
   const advanced = useRef(false);
   const { players } = useRoomChannel(code);
+  const [hostLocked, setHostLocked] = useState(false);
+  const [hostError, setHostError] = useState<string | null>(null);
 
   const totalSec = final ? PHASE_DURATION_SEC.final_question : PHASE_DURATION_SEC.question;
   const { secondsLeft, isExpired } = useQuestionTimer(startedAt, totalSec);
@@ -105,6 +113,34 @@ export function QuestionHost({
     return () => clearTimeout(id);
   }, [isExpired, players, isHost, code, questionId, router]);
 
+  // Detect host's own existing answer so a reload doesn't show the input again.
+  useEffect(() => {
+    if (!hostPlayerId) return;
+    let cancelled = false;
+    supabase.current
+      .from('answers')
+      .select('id')
+      .eq('player_id', hostPlayerId)
+      .eq('question_id', questionId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data) setHostLocked(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hostPlayerId, questionId]);
+
+  const handleHostLock = async (answer: number | string) => {
+    setHostError(null);
+    const result = await submitAnswer({ code, questionId, answer });
+    if (!result.ok) {
+      setHostError(result.error);
+      return;
+    }
+    setHostLocked(true);
+  };
+
   const question = QUESTIONS_BY_ID[questionId];
   if (!question) return null;
   const cat = CATEGORIES[question.cat];
@@ -154,6 +190,42 @@ export function QuestionHost({
           <DecryptorHostBody q={question} secondsLeft={secondsLeft} totalSec={totalSec} />
         )}
       </div>
+
+      {/* Host plays too — gets their own answer interface below the TV display. */}
+      {isHost && hostPlayerId && !hostLocked && (
+        <div
+          className="mt-3 p-3 border-2 rounded"
+          style={{ borderColor: C.cyan + '88', background: '#000' }}
+        >
+          <div className="font-pixel text-[10px] text-zinc-400 mb-2 flex items-center gap-2">
+            <Lock size={10} style={{ color: C.cyan }} />
+            <span>YOUR ANSWER (HOST)</span>
+          </div>
+          {question.type === 'classic' && (
+            <ClassicPhoneBody q={question} onLock={handleHostLock} />
+          )}
+          {question.type === 'decryptor' && (
+            <DecryptorPhoneBody onLock={handleHostLock} />
+          )}
+          {hostError && (
+            <div className="font-pixel text-xs text-center mt-2" style={{ color: C.red }}>
+              ✗ {hostError}
+            </div>
+          )}
+        </div>
+      )}
+
+      {isHost && hostLocked && (
+        <div
+          className="mt-3 p-3 border-2 rounded text-center"
+          style={{ borderColor: C.green, background: 'rgba(57,255,20,0.06)' }}
+        >
+          <div className="font-pixel text-xs flex items-center justify-center gap-2" style={{ color: C.green }}>
+            <Lock size={12} />
+            HOST LOCKED IN — awaiting other players
+          </div>
+        </div>
+      )}
 
       <div className="mt-2 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex gap-3">
