@@ -2,6 +2,7 @@
 
 import { C } from '@/styles/palette';
 import { HostFrame } from '@/components/chrome/HostFrame';
+import { MusicController } from '@/components/shared/MusicController';
 import { useRoomChannel } from '@/lib/realtime/useRoomChannel';
 import { LobbyHost } from '@/components/phases/lobby/LobbyHost';
 import { IntroHost } from '@/components/phases/intro/IntroHost';
@@ -10,6 +11,7 @@ import { RevealHost } from '@/components/phases/reveal/RevealHost';
 import { MainframeIntroHost } from '@/components/phases/mainframe/MainframeIntroHost';
 import { WagerHost } from '@/components/phases/wager/WagerHost';
 import { GameOverHost } from '@/components/phases/game_over/GameOverHost';
+import type { GamePhase } from '@/lib/audio/songs';
 
 type Props = {
   code: string;
@@ -120,6 +122,7 @@ export function HostPhaseRouter({ code, isHost, joinUrl }: Props) {
       <div className="w-full max-w-[1280px]">
         <HostFrame>{content}</HostFrame>
       </div>
+      <MusicController phase={room.phase as GamePhase} />
     </main>
   );
 }
