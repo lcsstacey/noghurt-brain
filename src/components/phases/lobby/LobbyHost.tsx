@@ -61,8 +61,22 @@ export function LobbyHost({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const settings = (room?.settings as RoomSettings | null) ?? DEFAULT_ROOM_SETTINGS;
+  const serverSettings = (room?.settings as RoomSettings | null) ?? DEFAULT_ROOM_SETTINGS;
   const settingsLocked = !isHost; // non-hosts see settings but can't change them
+
+  // Optimistic mirror of server settings — click handlers update this
+  // immediately so the host sees their own change without waiting for the
+  // 1.5s polling cycle. Synced down whenever the server's view actually
+  // changes (so other clients' updates still propagate).
+  const [optimistic, setOptimistic] = useState<RoomSettings>(serverSettings);
+  useEffect(() => {
+    setOptimistic(serverSettings);
+  }, [
+    serverSettings.rounds_count,
+    serverSettings.difficulty,
+    serverSettings.categories.join(','),
+  ]);
+  const settings = optimistic;
 
   const handleKick = async (playerId: string, name: string) => {
     if (!window.confirm(`Kick ${name}?`)) return;
@@ -80,15 +94,23 @@ export function LobbyHost({
       return;
     }
     setError(null);
+    setOptimistic({ ...settings, categories: next });
     const r = await updateRoomSettings(code, { categories: next });
-    if (!r.ok) setError(r.error);
+    if (!r.ok) {
+      setError(r.error);
+      setOptimistic(serverSettings);
+    }
   };
 
   const setDifficulty = async (id: 'normal' | 'nightmare') => {
     if (settingsLocked) return;
     setError(null);
+    setOptimistic({ ...settings, difficulty: id });
     const r = await updateRoomSettings(code, { difficulty: id });
-    if (!r.ok) setError(r.error);
+    if (!r.ok) {
+      setError(r.error);
+      setOptimistic(serverSettings);
+    }
   };
 
   const setRounds = async (n: number) => {
@@ -96,8 +118,12 @@ export function LobbyHost({
     const clamped = Math.max(MIN_ROUNDS, Math.min(MAX_ROUNDS, n));
     if (clamped === settings.rounds_count) return;
     setError(null);
+    setOptimistic({ ...settings, rounds_count: clamped });
     const r = await updateRoomSettings(code, { rounds_count: clamped });
-    if (!r.ok) setError(r.error);
+    if (!r.ok) {
+      setError(r.error);
+      setOptimistic(serverSettings);
+    }
   };
 
   useEffect(() => {
