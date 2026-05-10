@@ -144,6 +144,48 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      find_room_by_code: {
+        Args: { p_code: string }
+        Returns: {
+          code: string
+          created_at: string
+          current_question_idx: number
+          host_id: string
+          id: string
+          mainframe_question_id: string | null
+          phase: string
+          question_started_at: string | null
+          questions: Json
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "rooms"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      is_room_host: { Args: { p_room_id: string }; Returns: boolean }
+      is_room_member: { Args: { p_room_id: string }; Returns: boolean }
+      list_room_players: {
+        Args: { p_room_id: string }
+        Returns: {
+          color: string
+          id: string
+          is_host: boolean
+          joined_at: string
+          name: string
+          room_id: string
+          score: number
+          streak: number
+          user_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "players"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
     }
     Enums: {
       [_ in never]: never

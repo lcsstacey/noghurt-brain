@@ -20,11 +20,9 @@ export default async function HostPage({ params }: PageProps) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: room } = await supabase
-    .from('rooms')
-    .select('id, host_id, phase')
-    .eq('code', code)
-    .single();
+  // RPC bypasses RLS so non-members can resolve the room (404 vs join flow).
+  const { data: rooms } = await supabase.rpc('find_room_by_code', { p_code: code });
+  const room = rooms?.[0];
 
   if (!room) notFound();
 

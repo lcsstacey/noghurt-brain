@@ -35,28 +35,29 @@ export function useRoomChannel(code: string): UseRoomChannelResult {
     const supabase = supabaseRef.current;
     let cancelled = false;
 
+    // RPCs bypass RLS so the JoinForm (non-member) can also load room +
+    // player list. Realtime postgres_changes still respect RLS so
+    // non-members won't get live updates — fine because they become
+    // members on submit.
     async function fetchRoom() {
-      const { data, error } = await supabase
-        .from('rooms')
-        .select('*')
-        .eq('code', code.toUpperCase())
-        .single();
+      const { data, error } = await supabase.rpc('find_room_by_code', {
+        p_code: code.toUpperCase(),
+      });
       if (cancelled) return null;
       if (error) {
         setError(error.message);
         setStatus('error');
         return null;
       }
-      setRoom(data);
-      return data;
+      const r = data?.[0] ?? null;
+      setRoom(r);
+      return r;
     }
 
     async function fetchPlayers(roomId: string) {
-      const { data, error } = await supabase
-        .from('players')
-        .select('*')
-        .eq('room_id', roomId)
-        .order('joined_at', { ascending: true });
+      const { data, error } = await supabase.rpc('list_room_players', {
+        p_room_id: roomId,
+      });
       if (cancelled) return;
       if (error) {
         setError(error.message);
