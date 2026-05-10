@@ -16,7 +16,15 @@ const FADE_SEC = 0.05;
 
 export type UseThemeResult = {
   songId: SongId;
+  /** True after start() has been called — represents intent to play. */
   playing: boolean;
+  /**
+   * True only when the AudioContext is actually 'running' (i.e. the
+   * Web Audio autoplay rule has been satisfied via a user gesture).
+   * Diverges from `playing` when start() was called but the context
+   * is still 'suspended'.
+   */
+  running: boolean;
   vol: number;
   muted: boolean;
   /** Initialize audio context (must come from a user gesture) and start playback. */
@@ -38,6 +46,7 @@ export type UseThemeResult = {
 export function useTheme(initial: SongId = 'mainframe'): UseThemeResult {
   const [songId, setSongId] = useState<SongId>(initial);
   const [playing, setPlaying] = useState(false);
+  const [running, setRunning] = useState(false);
   const [vol, setVolState] = useState(0.5);
   const [muted, setMuted] = useState(false);
 
@@ -52,6 +61,23 @@ export function useTheme(initial: SongId = 'mainframe'): UseThemeResult {
   useEffect(() => {
     songRef.current = SONGS[songId];
   }, [songId]);
+
+  // Reflect actual AudioContext state. `running` diverges from `playing`
+  // when the autoplay rule blocks ctx.resume() — `playing` becomes true
+  // (intent) but `running` stays false (reality). MusicProvider uses
+  // `running` to decide whether to keep its gesture listener attached.
+  //
+  // Poll instead of subscribing to statechange because the listener
+  // would need to be re-attached every time the audio object is created,
+  // which is awkward. A 250ms interval is plenty for UI use.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const audio = audioRef.current;
+      const isRunning = audio?.ctx.state === 'running';
+      setRunning((prev) => (prev === isRunning ? prev : isRunning));
+    }, 250);
+    return () => clearInterval(id);
+  }, []);
 
   const tick = useCallback(() => {
     const audio = audioRef.current;
@@ -155,6 +181,7 @@ export function useTheme(initial: SongId = 'mainframe'): UseThemeResult {
   return {
     songId,
     playing,
+    running,
     vol,
     muted,
     start,

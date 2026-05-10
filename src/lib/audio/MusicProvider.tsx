@@ -58,30 +58,19 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   }, [phase, theme]);
 
   // Autostart strategy:
-  //  1. Try to start as soon as we have a phase set (no-op if already
-  //     playing; succeeds if we're already in a recent user gesture).
-  //  2. Fall back to a one-time document-level pointerdown / keydown /
-  //     touchstart listener that starts on the first interaction. Any
-  //     click anywhere on the site unblocks the audio.
+  // Wait for an actual user gesture before calling start(). The Web Audio
+  // autoplay rule blocks ctx.resume() outside a user gesture, so eagerly
+  // calling start() on mount marks the React state as `playing=true`
+  // while the AudioContext stays `suspended` — silent forever.
+  //
+  // Instead: keep the gesture listener attached UNTIL the AudioContext is
+  // confirmed `running` (theme.running, distinct from theme.playing). Each
+  // gesture re-attempts. Once running, the listener is removed.
   useEffect(() => {
     if (phase == null) return;
-    if (theme.playing) return;
+    if (theme.running) return;
 
-    // Pick the right initial song before starting so we don't jump tracks
-    // from MENU_SONG on the first beat.
-    const target: SongId = phase === 'menu' ? MENU_SONG : songForPhase(phase);
-    if (target !== theme.songId) {
-      theme.changeSong(target);
-      lastSongIdRef.current = target;
-    }
-    theme.start();
-  }, [phase, theme]);
-
-  useEffect(() => {
-    if (theme.playing) return;
-    if (phase == null) return;
-
-    const startOnFirstGesture = () => {
+    const startOnGesture = () => {
       const target: SongId = phase === 'menu' ? MENU_SONG : songForPhase(phase);
       if (target !== theme.songId) {
         theme.changeSong(target);
@@ -89,15 +78,16 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       }
       theme.start();
     };
-    window.addEventListener('pointerdown', startOnFirstGesture, { once: true });
-    window.addEventListener('keydown', startOnFirstGesture, { once: true });
-    window.addEventListener('touchstart', startOnFirstGesture, { once: true });
+
+    window.addEventListener('pointerdown', startOnGesture);
+    window.addEventListener('keydown', startOnGesture);
+    window.addEventListener('touchstart', startOnGesture);
     return () => {
-      window.removeEventListener('pointerdown', startOnFirstGesture);
-      window.removeEventListener('keydown', startOnFirstGesture);
-      window.removeEventListener('touchstart', startOnFirstGesture);
+      window.removeEventListener('pointerdown', startOnGesture);
+      window.removeEventListener('keydown', startOnGesture);
+      window.removeEventListener('touchstart', startOnGesture);
     };
-  }, [phase, theme]);
+  }, [phase, theme.running, theme]);
 
   const value = useMemo<MusicContextValue>(
     () => ({ phase, setPhase, theme, visible }),

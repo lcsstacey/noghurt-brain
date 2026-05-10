@@ -20,7 +20,7 @@ export function MusicController() {
   if (!visible) return null;
 
   const handleIconClick = () => {
-    if (!theme.playing) {
+    if (!theme.running) {
       theme.start();
       setExpanded(true);
       return;
@@ -28,15 +28,15 @@ export function MusicController() {
     theme.toggleMute();
   };
 
-  const accent = theme.playing && !theme.muted ? C.cyan : '#52525b';
-  const Icon = !theme.playing ? Music : theme.muted ? VolumeX : Volume2;
+  const accent = theme.running && !theme.muted ? C.cyan : '#52525b';
+  const Icon = !theme.running ? Music : theme.muted ? VolumeX : Volume2;
   const trackTitle = SONGS[theme.songId].title;
 
   return (
     <div
       className="fixed bottom-4 right-4 z-50 flex items-center gap-2 bg-black border-2 px-3 py-2"
       style={{ borderColor: accent + '88' }}
-      onMouseEnter={() => theme.playing && setExpanded(true)}
+      onMouseEnter={() => theme.running && setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
     >
       <button
@@ -44,16 +44,16 @@ export function MusicController() {
         onClick={handleIconClick}
         className="flex items-center gap-2 font-pixel text-[10px]"
         style={{ color: accent }}
-        aria-label={!theme.playing ? 'Start music' : theme.muted ? 'Unmute' : 'Mute'}
+        aria-label={!theme.running ? 'Start music' : theme.muted ? 'Unmute' : 'Mute'}
       >
         <Icon size={14} />
-        {!theme.playing && <span className="hidden sm:inline">CLICK ANYWHERE</span>}
-        {theme.playing && !expanded && (
+        {!theme.running && <span className="hidden sm:inline">CLICK ANYWHERE</span>}
+        {theme.running && !expanded && (
           <span className="hidden sm:inline">{theme.muted ? 'MUTED' : trackTitle}</span>
         )}
       </button>
 
-      {theme.playing && expanded && (
+      {theme.running && expanded && (
         <>
           <div className="font-pixel text-[8px] hidden sm:block" style={{ color: accent }}>
             {trackTitle}
