@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { C } from '@/styles/palette';
 import { PlayerAvatar } from '@/components/shared/PlayerAvatar';
+import { PlayerCard } from '@/components/shared/PlayerCard';
 import { PhoneShell } from '@/components/phases/lobby/PhoneShell';
 import { useRoomChannel } from '@/lib/realtime/useRoomChannel';
 import { useHostAdmin } from '@/lib/game/HostAdminContext';
@@ -46,10 +47,7 @@ export function LobbyPhone({ code, playerId }: LobbyPhoneProps) {
     <div className="min-h-screen" style={{ backgroundColor: C.bg }}>
       <PhoneShell you={player}>
         <div className="h-full flex flex-col items-center text-center gap-4 py-8">
-          <PlayerAvatar player={player} size={80} showName={false} glow />
-          <div className="font-pixel text-base text-glow" style={{ color: C[player.color] }}>
-            {player.name}
-          </div>
+          <PlayerCard player={player} scale={6} bob />
           <div className="font-pixel text-[9px] text-zinc-500">▸ JOINED LOBBY</div>
 
           <div className="border-2 px-4 py-3 mt-2" style={{ borderColor: C.green }}>
@@ -83,13 +81,13 @@ export function LobbyPhone({ code, playerId }: LobbyPhoneProps) {
                   const showKick = kickMode && !isMe;
                   return (
                     <div key={p.id} className="relative">
-                      <PlayerAvatar player={pl} size={36} showName={false} />
+                      <PlayerAvatar player={pl} size={32} showName={false} />
                       {showKick && (
                         <button
                           type="button"
                           onClick={() => handleKick(p.id, p.name)}
                           aria-label={`Kick ${p.name}`}
-                          className="absolute -top-1 -right-1 w-4 h-4 grid place-items-center border bg-black"
+                          className="absolute -top-1 -right-1 w-4 h-4 grid place-items-center border bg-black z-10"
                           style={{ borderColor: C.red, color: C.red }}
                         >
                           <X size={8} />

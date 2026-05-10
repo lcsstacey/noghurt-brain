@@ -9,7 +9,8 @@ import { TimerBar } from '@/components/shared/TimerBar';
 import { CATEGORIES } from '@/lib/game/categories';
 import { QUESTIONS_BY_ID } from '@/data/questions';
 import { useRoomChannel } from '@/lib/realtime/useRoomChannel';
-import { useQuestionTimer, PHASE_DURATION_SEC, PHASE_ADVANCE_MS } from '@/lib/game/useQuestionTimer';
+import { useQuestionTimer, questionDuration, PHASE_ADVANCE_MS } from '@/lib/game/useQuestionTimer';
+import type { RoomSettings } from '@/lib/types';
 import { hostGradeAndAdvance } from '@/lib/actions/hostGradeAndAdvance';
 import { submitAnswer } from '@/lib/actions/submitAnswer';
 import { toPlayer } from '@/lib/game/colorIcon';
@@ -48,11 +49,12 @@ export function QuestionHost({
 }: QuestionHostProps) {
   const router = useRouter();
   const advanced = useRef(false);
-  const { players } = useRoomChannel(code);
+  const { players, room } = useRoomChannel(code);
   const [hostLocked, setHostLocked] = useState(false);
   const [hostError, setHostError] = useState<string | null>(null);
 
-  const totalSec = final ? PHASE_DURATION_SEC.final_question : PHASE_DURATION_SEC.question;
+  const difficulty = (room?.settings as RoomSettings | undefined)?.difficulty;
+  const totalSec = questionDuration(difficulty, final);
   const { secondsLeft, isExpired } = useQuestionTimer(startedAt, totalSec);
 
   // Lock count via realtime answers query — host fetches via RPC for visibility.

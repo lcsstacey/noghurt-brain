@@ -142,6 +142,7 @@ export type Database = {
           phase: string
           question_started_at: string | null
           questions: Json
+          settings: Json
         }
         Insert: {
           code: string
@@ -153,6 +154,7 @@ export type Database = {
           phase?: string
           question_started_at?: string | null
           questions?: Json
+          settings?: Json
         }
         Update: {
           code?: string
@@ -164,6 +166,7 @@ export type Database = {
           phase?: string
           question_started_at?: string | null
           questions?: Json
+          settings?: Json
         }
         Relationships: []
       }
@@ -226,6 +229,7 @@ export type Database = {
           phase: string
           question_started_at: string | null
           questions: Json
+          settings: Json
         }
         SetofOptions: {
           from: "*"
@@ -250,6 +254,7 @@ export type Database = {
           phase: string
           question_started_at: string | null
           questions: Json
+          settings: Json
         }[]
         SetofOptions: {
           from: "*"
@@ -333,6 +338,7 @@ export type Database = {
           phase: string
           question_started_at: string | null
           questions: Json
+          settings: Json
         }
         SetofOptions: {
           from: "*"

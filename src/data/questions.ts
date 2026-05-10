@@ -328,10 +328,25 @@ export type RoundPick = {
   mainframe: Question;
 };
 
-export function pickRoundQuestions(seed: string, normalCount = 5): RoundPick {
-  const normalPool = [...CLASSIC_NORMAL, ...DECRYPTOR_NORMAL];
-  const shuffled = seededShuffle(normalPool, seed);
-  const questions = shuffled.slice(0, normalCount);
+export type PickSettings = {
+  categories: Category[];
+  rounds_count: number;
+};
+
+export function pickRoundQuestions(seed: string, settings: PickSettings): RoundPick {
+  const allowed = new Set(settings.categories);
+  const eligible = [...CLASSIC_NORMAL, ...DECRYPTOR_NORMAL].filter((q) =>
+    allowed.has(q.cat),
+  );
+  // Fall back to the full pool if the host's selection somehow ends up
+  // empty — shouldn't happen (server-side validation rejects 0 cats) but
+  // safer than throwing during gameplay.
+  const pool = eligible.length > 0 ? eligible : [...CLASSIC_NORMAL, ...DECRYPTOR_NORMAL];
+  const shuffled = seededShuffle(pool, seed);
+  const questions = shuffled.slice(0, settings.rounds_count);
+  // Mainframe pool unfiltered — every game gets a mainframe regardless
+  // of category settings (the mainframe is its own pool, deliberately
+  // small + curated).
   const mainframe = seededShuffle(MAINFRAME_POOL, seed + '-mf')[0];
   return { questions, mainframe };
 }

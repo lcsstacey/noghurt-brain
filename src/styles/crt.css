@@ -276,6 +276,20 @@
   animation: slideInUp 0.4s ease-out backwards;
 }
 
+/* ── Idle bob (class portrait subtle motion) ───────────────────── */
+@keyframes idleBob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+.idle-bob {
+  animation: idleBob 2.4s ease-in-out infinite;
+}
+
 /* ── Radar sweep (waiting state) ───────────────────────────────── */
 @keyframes radarSweep {
   0% {

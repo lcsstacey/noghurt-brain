@@ -6,8 +6,10 @@ import { C } from '@/styles/palette';
 import { TimerBar } from '@/components/shared/TimerBar';
 import { PhoneShell } from '@/components/phases/lobby/PhoneShell';
 import { QUESTIONS_BY_ID } from '@/data/questions';
-import { useQuestionTimer, PHASE_DURATION_SEC } from '@/lib/game/useQuestionTimer';
+import { useQuestionTimer, questionDuration } from '@/lib/game/useQuestionTimer';
+import { useRoomChannel } from '@/lib/realtime/useRoomChannel';
 import { submitAnswer } from '@/lib/actions/submitAnswer';
+import type { RoomSettings } from '@/lib/types';
 import { toPlayer } from '@/lib/game/colorIcon';
 import { createClient } from '@/lib/supabase/client';
 import { ClassicPhoneBody } from './ClassicPhoneBody';
@@ -29,7 +31,9 @@ export function QuestionPhone({ code, me, questionId, startedAt, final = false }
   const [locked, setLocked] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [supabase] = useState(() => createClient());
-  const totalSec = final ? PHASE_DURATION_SEC.final_question : PHASE_DURATION_SEC.question;
+  const { room } = useRoomChannel(code);
+  const difficulty = (room?.settings as RoomSettings | undefined)?.difficulty;
+  const totalSec = questionDuration(difficulty, final);
   const { secondsLeft } = useQuestionTimer(startedAt, totalSec);
 
   // Check if I've already locked in (e.g. on reload).

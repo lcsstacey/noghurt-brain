@@ -157,6 +157,7 @@ function TvViewForPhase({
           joinUrl={joinUrl}
           showStartButton={!isHost}
           meId={me.id}
+          isHost={isHost}
         />
       );
       break;

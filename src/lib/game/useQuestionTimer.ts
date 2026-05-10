@@ -40,6 +40,19 @@ export const PHASE_DURATION_SEC = {
   final_question: 18,
 } as const;
 
+/**
+ * Per-difficulty question timer. NIGHTMARE shaves 5s off normal questions
+ * for the "Faster · Harder" feel; the wager + final question timers stay
+ * unchanged (they're already on a tighter schedule).
+ */
+export function questionDuration(
+  difficulty: 'normal' | 'nightmare' | undefined,
+  isFinal: boolean,
+): number {
+  if (isFinal) return PHASE_DURATION_SEC.final_question;
+  return difficulty === 'nightmare' ? 10 : PHASE_DURATION_SEC.question;
+}
+
 /** Auto-advance delays in milliseconds. */
 export const PHASE_ADVANCE_MS = {
   intro: 1400,

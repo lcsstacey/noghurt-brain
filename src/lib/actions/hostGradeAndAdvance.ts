@@ -3,7 +3,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { getUser } from '@/lib/auth/getUser';
 import { QUESTIONS_BY_ID, isCorrect, calcScore } from '@/data/questions';
-import { PHASE_DURATION_SEC } from '@/lib/game/useQuestionTimer';
+import { questionDuration } from '@/lib/game/useQuestionTimer';
+import type { RoomSettings } from '@/lib/types';
 
 export type GradingResult = { ok: true } | { ok: false; error: string };
 
@@ -63,7 +64,8 @@ export async function hostGradeAndAdvance(
 
     if (!players) return { ok: false, error: 'failed to load players' };
 
-    const totalSec = isFinal ? PHASE_DURATION_SEC.final_question : PHASE_DURATION_SEC.question;
+    const settings = room.settings as RoomSettings | null;
+    const totalSec = questionDuration(settings?.difficulty, isFinal);
     const startedAtMs = room.question_started_at ? new Date(room.question_started_at).getTime() : Date.now();
 
     type GradeRow = {

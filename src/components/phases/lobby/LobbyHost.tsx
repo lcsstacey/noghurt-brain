@@ -4,24 +4,30 @@ import { useEffect, useState, useTransition } from 'react';
 import QRCode from 'qrcode';
 import { Atom, ChevronRight, Gamepad2, Globe, Power, Radio, Wifi, X } from 'lucide-react';
 import { C } from '@/styles/palette';
-import { PlayerAvatar } from '@/components/shared/PlayerAvatar';
+import { PlayerCard } from '@/components/shared/PlayerCard';
 import { useRoomChannel } from '@/lib/realtime/useRoomChannel';
 import { startGame } from '@/lib/actions/startGame';
 import { kickPlayer } from '@/lib/actions/kickPlayer';
+import { updateRoomSettings } from '@/lib/actions/updateRoomSettings';
 import { useHostAdmin } from '@/lib/game/HostAdminContext';
 import { toPlayer } from '@/lib/game/colorIcon';
+import { DEFAULT_ROOM_SETTINGS, type RoomSettings } from '@/lib/types';
+import type { Category } from '@/data/questions';
 
-const V2_CATEGORIES = [
+const CATEGORY_OPTIONS: Array<{ id: Category; name: string; Icon: typeof Atom; color: string }> = [
   { id: 'science', name: 'HARDCORE SCIENCE', Icon: Atom, color: C.cyan },
   { id: 'internet', name: 'INTERNET CULTURE', Icon: Wifi, color: C.pink },
   { id: 'geography', name: 'GEOGRAPHY', Icon: Globe, color: C.green },
   { id: 'retro', name: 'RETRO GAMING', Icon: Gamepad2, color: C.yellow },
 ];
 
-const V2_DIFFICULTY = [
-  { id: 'normal', label: 'NORMAL', color: C.green, sub: 'Standard timing' },
-  { id: 'nightmare', label: 'NIGHTMARE', color: C.red, sub: 'Faster · Harder' },
+const DIFFICULTY_OPTIONS = [
+  { id: 'normal' as const, label: 'NORMAL', color: C.green, sub: 'Standard timing' },
+  { id: 'nightmare' as const, label: 'NIGHTMARE', color: C.red, sub: 'Faster · Harder' },
 ];
+
+const MIN_ROUNDS = 3;
+const MAX_ROUNDS = 7;
 
 type LobbyHostProps = {
   code: string;
@@ -30,6 +36,8 @@ type LobbyHostProps = {
   showStartButton?: boolean;
   /** Caller's player_id, so kick UI can hide on caller's own avatar. */
   meId?: string;
+  /** Whether the caller is the host (can edit settings). */
+  isHost?: boolean;
 };
 
 /**
@@ -40,16 +48,55 @@ type LobbyHostProps = {
  * v2-cut features per docs/MVP_SCOPE.md, surfaced as "V2" placeholders
  * to keep the prototype's visual rhythm.
  */
-export function LobbyHost({ code, joinUrl, showStartButton = true, meId }: LobbyHostProps) {
-  const { players, status } = useRoomChannel(code);
+export function LobbyHost({
+  code,
+  joinUrl,
+  showStartButton = true,
+  meId,
+  isHost = false,
+}: LobbyHostProps) {
+  const { room, players, status } = useRoomChannel(code);
   const { kickMode } = useHostAdmin();
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  const settings = (room?.settings as RoomSettings | null) ?? DEFAULT_ROOM_SETTINGS;
+  const settingsLocked = !isHost; // non-hosts see settings but can't change them
+
   const handleKick = async (playerId: string, name: string) => {
     if (!window.confirm(`Kick ${name}?`)) return;
     const r = await kickPlayer(code, playerId);
+    if (!r.ok) setError(r.error);
+  };
+
+  const toggleCategory = async (id: Category) => {
+    if (settingsLocked) return;
+    const next = settings.categories.includes(id)
+      ? settings.categories.filter((c) => c !== id)
+      : [...settings.categories, id];
+    if (next.length === 0) {
+      setError('pick at least 1 category');
+      return;
+    }
+    setError(null);
+    const r = await updateRoomSettings(code, { categories: next });
+    if (!r.ok) setError(r.error);
+  };
+
+  const setDifficulty = async (id: 'normal' | 'nightmare') => {
+    if (settingsLocked) return;
+    setError(null);
+    const r = await updateRoomSettings(code, { difficulty: id });
+    if (!r.ok) setError(r.error);
+  };
+
+  const setRounds = async (n: number) => {
+    if (settingsLocked) return;
+    const clamped = Math.max(MIN_ROUNDS, Math.min(MAX_ROUNDS, n));
+    if (clamped === settings.rounds_count) return;
+    setError(null);
+    const r = await updateRoomSettings(code, { rounds_count: clamped });
     if (!r.ok) setError(r.error);
   };
 
@@ -87,7 +134,10 @@ export function LobbyHost({ code, joinUrl, showStartButton = true, meId }: Lobby
     });
   };
 
-  const canStart = players.length >= 2 && (status === 'subscribed' || status === 'loading');
+  const canStart =
+    players.length >= 2 &&
+    settings.categories.length >= 1 &&
+    (status === 'subscribed' || status === 'loading');
 
   return (
     <div className="flex flex-col gap-5 h-full">
@@ -156,13 +206,13 @@ export function LobbyHost({ code, joinUrl, showStartButton = true, meId }: Lobby
                 className="pixel-pop relative"
                 style={{ animationDelay: `${i * 0.08}s` }}
               >
-                <PlayerAvatar player={player} size={68} />
+                <PlayerCard player={player} scale={5} />
                 {showKick && (
                   <button
                     type="button"
                     onClick={() => handleKick(p.id, p.name)}
                     aria-label={`Kick ${p.name}`}
-                    className="absolute -top-2 -right-2 w-6 h-6 grid place-items-center border-2 bg-black"
+                    className="absolute -top-2 -right-2 w-6 h-6 grid place-items-center border-2 bg-black z-10"
                     style={{ borderColor: C.red, color: C.red }}
                   >
                     <X size={12} />
@@ -182,75 +232,105 @@ export function LobbyHost({ code, joinUrl, showStartButton = true, meId }: Lobby
         </div>
       </div>
 
-      {/* v2 placeholder toggles — visually present, inert */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-2 opacity-50 pointer-events-none flicker">
+      {/* Functional settings — host can edit, others view-only. */}
+      <div
+        className={`grid grid-cols-1 md:grid-cols-2 gap-5 mt-2 ${settingsLocked ? 'opacity-70 pointer-events-none' : ''}`}
+      >
+        {/* CATEGORIES (multi-select) */}
         <div>
-          <div className="font-pixel text-xs text-zinc-500 mb-3 flex items-center gap-2">
+          <div className="font-pixel text-xs text-zinc-400 mb-3 flex items-center gap-2">
             <span style={{ color: C.pink }}>▸</span>
             CATEGORIES
-            <span
-              className="font-pixel text-[8px] px-1.5 py-0.5 border ml-2"
-              style={{ borderColor: C.purple, color: C.purple }}
-            >
-              V2
-            </span>
+            <span style={{ color: C.pink }}>[{settings.categories.length}/4]</span>
           </div>
           <div className="grid grid-cols-2 gap-2.5">
-            {V2_CATEGORIES.map((cat) => (
-              <div
-                key={cat.id}
-                className="font-pixel text-[10px] p-3 flex items-center gap-2 border-2 text-left"
-                style={{ borderColor: '#27272a', color: '#52525b' }}
-              >
-                <cat.Icon size={18} />
-                <span className="leading-tight">{cat.name}</span>
-              </div>
-            ))}
+            {CATEGORY_OPTIONS.map((cat) => {
+              const active = settings.categories.includes(cat.id);
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => toggleCategory(cat.id)}
+                  className="font-pixel text-[10px] p-3 transition-all flex items-center gap-2 border-2 text-left"
+                  style={{
+                    borderColor: active ? cat.color : '#27272a',
+                    background: active ? `${cat.color}1a` : 'transparent',
+                    color: active ? cat.color : '#52525b',
+                    boxShadow: active
+                      ? `0 0 14px ${cat.color}66, inset 0 0 14px ${cat.color}33`
+                      : 'none',
+                  }}
+                >
+                  <cat.Icon size={18} />
+                  <span className="leading-tight">{cat.name}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
+        {/* DIFFICULTY + ROUNDS stacked */}
         <div className="space-y-4">
           <div>
-            <div className="font-pixel text-xs text-zinc-500 mb-3 flex items-center gap-2">
-              <span style={{ color: C.yellow }}>▸</span>
-              DIFFICULTY
-              <span
-                className="font-pixel text-[8px] px-1.5 py-0.5 border ml-2"
-                style={{ borderColor: C.purple, color: C.purple }}
-              >
-                V2
-              </span>
+            <div className="font-pixel text-xs text-zinc-400 mb-3 flex items-center gap-2">
+              <span style={{ color: C.yellow }}>▸</span>DIFFICULTY
             </div>
             <div className="grid grid-cols-2 gap-2.5">
-              {V2_DIFFICULTY.map((d) => (
-                <div
-                  key={d.id}
-                  className="font-pixel text-[10px] p-3 border-2 text-left"
-                  style={{ borderColor: '#27272a', color: '#52525b' }}
-                >
-                  <div>{d.label}</div>
-                  <div className="font-crt text-sm opacity-70 mt-0.5">{d.sub}</div>
-                </div>
-              ))}
+              {DIFFICULTY_OPTIONS.map((d) => {
+                const on = settings.difficulty === d.id;
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => setDifficulty(d.id)}
+                    className="font-pixel text-[10px] p-3 transition-all border-2 text-left"
+                    style={{
+                      borderColor: on ? d.color : '#27272a',
+                      background: on ? `${d.color}1a` : 'transparent',
+                      color: on ? d.color : '#52525b',
+                      boxShadow: on
+                        ? `0 0 14px ${d.color}66, inset 0 0 10px ${d.color}33`
+                        : 'none',
+                    }}
+                  >
+                    <div>{d.label}</div>
+                    <div className="font-crt text-sm opacity-70 mt-0.5">{d.sub}</div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           <div>
-            <div className="font-pixel text-xs text-zinc-500 mb-3 flex items-center gap-2">
-              <span style={{ color: C.cyan }}>▸</span>
-              ROUNDS
-              <span
-                className="font-pixel text-[8px] px-1.5 py-0.5 border ml-2"
-                style={{ borderColor: C.purple, color: C.purple }}
-              >
-                V2
-              </span>
+            <div className="font-pixel text-xs text-zinc-400 mb-3 flex items-center gap-2">
+              <span style={{ color: C.cyan }}>▸</span>ROUNDS
             </div>
-            <div className="font-pixel text-3xl text-center text-glow" style={{ color: C.cyan }}>
-              5
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setRounds(settings.rounds_count - 1)}
+                disabled={settings.rounds_count <= MIN_ROUNDS}
+                className="font-pixel text-lg w-10 h-10 border-2 border-zinc-600 hover:border-cyan-400 text-zinc-300 disabled:opacity-30"
+              >
+                −
+              </button>
+              <div
+                className="font-pixel text-3xl flex-1 text-center text-glow"
+                style={{ color: C.cyan }}
+              >
+                {settings.rounds_count}
+              </div>
+              <button
+                type="button"
+                onClick={() => setRounds(settings.rounds_count + 1)}
+                disabled={settings.rounds_count >= MAX_ROUNDS}
+                className="font-pixel text-lg w-10 h-10 border-2 border-zinc-600 hover:border-cyan-400 text-zinc-300 disabled:opacity-30"
+              >
+                +
+              </button>
             </div>
             <div className="font-crt text-base mt-1.5 text-zinc-500 text-center">
-              4 normal + 1 MAINFRAME
+              {settings.rounds_count} normal + 1 MAINFRAME
             </div>
           </div>
         </div>
