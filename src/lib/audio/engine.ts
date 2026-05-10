@@ -192,8 +192,12 @@ export function makeAudio(): Audio {
   reverbSend.connect(delay);
   delay.connect(reverbReturn);
 
+  // Route everything through `master` so volume / mute control the wet
+  // signal too. Previously reverbReturn connected straight to comp,
+  // which meant setting master.gain=0 silenced the dry signal but the
+  // reverb tail kept playing — sounded like the slider didn't work.
+  reverbReturn.connect(master);
   master.connect(comp);
-  reverbReturn.connect(comp);
   comp.connect(ctx.destination);
 
   return { ctx, master, reverbSend };

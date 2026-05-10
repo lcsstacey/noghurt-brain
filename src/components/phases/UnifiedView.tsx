@@ -155,7 +155,10 @@ function TvViewForPhase({
         <LobbyHost
           code={code}
           joinUrl={joinUrl}
-          showStartButton={!isHost}
+          // Inline START button shows for the host (primary surface); guests
+          // never see it (they can't start games anyway). Drawer is the
+          // backup for the host when they're scrolled / on small screens.
+          showStartButton={isHost}
           meId={me.id}
           isHost={isHost}
         />

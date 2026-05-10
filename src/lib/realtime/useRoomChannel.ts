@@ -97,14 +97,14 @@ export function useRoomChannel(code: string): UseRoomChannelResult {
         });
 
       // Polling fallback: if realtime drops events (RLS / JWT timing /
-      // mobile-tab-suspended quirks), this catches up within 3s. Cheap
-      // — two RPCs every 3s — and dramatically improves perceived
-      // reliability for the lobby player list especially.
+      // mobile-tab-suspended quirks), this catches up within ~1.5s.
+      // Cheaper than longer intervals would suggest because both RPCs
+      // are tiny SECURITY DEFINER lookups.
       pollHandle = setInterval(() => {
         if (cancelled) return;
         void fetchRoom();
         void fetchPlayers(r.id);
-      }, 3000);
+      }, 1500);
     })();
 
     return () => {
