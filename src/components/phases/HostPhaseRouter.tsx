@@ -2,8 +2,8 @@
 
 import { C } from '@/styles/palette';
 import { HostFrame } from '@/components/chrome/HostFrame';
-import { MusicController } from '@/components/shared/MusicController';
 import { useRoomChannel } from '@/lib/realtime/useRoomChannel';
+import { useMusicPhase } from '@/lib/audio/MusicProvider';
 import { LobbyHost } from '@/components/phases/lobby/LobbyHost';
 import { IntroHost } from '@/components/phases/intro/IntroHost';
 import { QuestionHost } from '@/components/phases/question/QuestionHost';
@@ -27,6 +27,11 @@ type Props = {
  */
 export function HostPhaseRouter({ code, isHost, hostPlayerId, joinUrl }: Props) {
   const { room } = useRoomChannel(code);
+
+  // Tells the global MusicProvider to follow room.phase. Provider keeps the
+  // AudioContext alive across navigations so the lobby's first beat lands
+  // immediately after CREATE ROOM (no second click needed).
+  useMusicPhase((room?.phase as GamePhase | undefined) ?? null);
 
   if (!room) {
     return (
@@ -126,7 +131,6 @@ export function HostPhaseRouter({ code, isHost, hostPlayerId, joinUrl }: Props) 
       <div className="w-full max-w-[1280px]">
         <HostFrame>{content}</HostFrame>
       </div>
-      <MusicController phase={room.phase as GamePhase} />
     </main>
   );
 }

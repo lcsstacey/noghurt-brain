@@ -1,76 +1,23 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Music, Volume2, VolumeX } from 'lucide-react';
 import { C } from '@/styles/palette';
-import { useTheme } from '@/lib/audio/useTheme';
-import { songForPhase, SONGS, type GamePhase, type SongId } from '@/lib/audio/songs';
-
-type Props = {
-  /** Game phase, or 'menu' for the landing page (plays DEEP_LINK ambient). */
-  phase: GamePhase | 'menu';
-};
-
-const MENU_SONG: SongId = 'deeplink';
+import { useMusic } from '@/lib/audio/MusicProvider';
+import { SONGS } from '@/lib/audio/songs';
 
 /**
- * Floating music controller — mounted on the host TV view AND the landing
- * page menu. Phase-aware: song auto-switches as room.phase changes.
+ * Floating bottom-right music UI. Reads from the global MusicProvider.
+ * Hidden when no phase is set (e.g. on /play/[code] phone routes).
  *
- * Autostart strategy: tries to start immediately on mount (works if a user
- * gesture happened in the prior 2-3 seconds), and registers a one-time
- * document-level interaction listener so music starts on the first
- * click / tap / keypress without an explicit "start music" button.
- *
- * Players' phones never mount this — 8 unsynced playheads on a Discord
- * call would be cacophony.
+ * The audio engine itself lives in the provider at the root layout, so
+ * navigations don't kill the AudioContext.
  */
-export function MusicController({ phase }: Props) {
-  const initialSong: SongId = phase === 'menu' ? MENU_SONG : songForPhase(phase);
-  const theme = useTheme(initialSong);
-  const lastSongId = useRef(theme.songId);
+export function MusicController() {
+  const { theme, visible } = useMusic();
   const [expanded, setExpanded] = useState(false);
 
-  // Try to autostart on mount. May silently fail if no recent user gesture
-  // — that's fine, the global interaction listener below will pick it up.
-  useEffect(() => {
-    if (theme.playing) return;
-    theme.start();
-    // start() is no-op-safe; if the AudioContext is suspended, the next
-    // user gesture handler will resume it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // One-time document-level fallback for autoplay-blocked browsers.
-  // Any click / tap / keypress on the page = music starts. Listener
-  // removes itself after first fire.
-  useEffect(() => {
-    if (theme.playing) return;
-    const startOnFirstGesture = () => {
-      theme.start();
-      window.removeEventListener('pointerdown', startOnFirstGesture);
-      window.removeEventListener('keydown', startOnFirstGesture);
-      window.removeEventListener('touchstart', startOnFirstGesture);
-    };
-    window.addEventListener('pointerdown', startOnFirstGesture, { once: true });
-    window.addEventListener('keydown', startOnFirstGesture, { once: true });
-    window.addEventListener('touchstart', startOnFirstGesture, { once: true });
-    return () => {
-      window.removeEventListener('pointerdown', startOnFirstGesture);
-      window.removeEventListener('keydown', startOnFirstGesture);
-      window.removeEventListener('touchstart', startOnFirstGesture);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [theme.playing]);
-
-  // Auto-switch song when phase changes (only once playing).
-  useEffect(() => {
-    const target: SongId = phase === 'menu' ? MENU_SONG : songForPhase(phase);
-    if (target !== lastSongId.current) {
-      lastSongId.current = target;
-      if (theme.playing) theme.changeSong(target);
-    }
-  }, [phase, theme]);
+  if (!visible) return null;
 
   const handleIconClick = () => {
     if (!theme.playing) {
@@ -100,7 +47,7 @@ export function MusicController({ phase }: Props) {
         aria-label={!theme.playing ? 'Start music' : theme.muted ? 'Unmute' : 'Mute'}
       >
         <Icon size={14} />
-        {!theme.playing && <span className="hidden sm:inline">START MUSIC</span>}
+        {!theme.playing && <span className="hidden sm:inline">CLICK ANYWHERE</span>}
         {theme.playing && !expanded && (
           <span className="hidden sm:inline">{theme.muted ? 'MUTED' : trackTitle}</span>
         )}

@@ -6,7 +6,7 @@ import { ChevronRight, KeyRound, Power, Radio, X } from 'lucide-react';
 import { C } from '@/styles/palette';
 import { createRoom } from '@/lib/actions/createRoom';
 import { normalizeCode } from '@/lib/game/code';
-import { MusicController } from '@/components/shared/MusicController';
+import { useMusicPhase } from '@/lib/audio/MusicProvider';
 
 export default function LandingPage() {
   const router = useRouter();
@@ -14,6 +14,9 @@ export default function LandingPage() {
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isCreating, startCreating] = useTransition();
+
+  // Tells the global MusicProvider to play the menu track.
+  useMusicPhase('menu');
 
   const handleCreate = () => {
     setError(null);
@@ -155,8 +158,6 @@ export default function LandingPage() {
           <span>© 2026 NOGHURT BRAIN · v0.1.0</span>
         </div>
       </div>
-
-      <MusicController phase="menu" />
     </main>
   );
 }
