@@ -39,11 +39,12 @@ export async function joinRoom(input: JoinRoomInput): Promise<JoinRoomResult> {
     const user = await signInAnonIfNeeded();
     const supabase = await createClient();
 
-    const { data: room } = await supabase
-      .from('rooms')
-      .select('id, phase, host_id')
-      .eq('code', input.code.toUpperCase())
-      .single();
+    // RPC bypasses RLS so non-members can resolve the room before they
+    // become a member (chicken-and-egg with the join flow).
+    const { data: rooms } = await supabase.rpc('find_room_by_code', {
+      p_code: input.code.toUpperCase(),
+    });
+    const room = rooms?.[0];
 
     if (!room) return { ok: false, error: 'room not found' };
     if (room.phase !== 'lobby') return { ok: false, error: 'game already in progress' };

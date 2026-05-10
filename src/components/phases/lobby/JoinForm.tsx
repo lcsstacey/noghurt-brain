@@ -79,7 +79,7 @@ export function JoinForm({ code, role }: JoinFormProps) {
           </h1>
         </div>
 
-        <form onSubmit={handleSubmit} action={signInWithDiscord} className="flex flex-col gap-5">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div>
             <label
               htmlFor="player-name"
@@ -165,18 +165,22 @@ export function JoinForm({ code, role }: JoinFormProps) {
               {isPending ? 'CONNECTING…' : 'LOCK IN'}
             </span>
           </button>
+        </form>
 
-          <div className="flex items-center gap-3 my-1">
-            <div className="flex-1 h-px bg-zinc-800" />
-            <div className="font-pixel text-[8px] text-zinc-600">OR</div>
-            <div className="flex-1 h-px bg-zinc-800" />
-          </div>
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px bg-zinc-800" />
+          <div className="font-pixel text-[8px] text-zinc-600">OR</div>
+          <div className="flex-1 h-px bg-zinc-800" />
+        </div>
 
-          <button
-            type="submit"
-            formAction={signInWithDiscord}
+        <form action={signInWithDiscord}>
+          <input
+            type="hidden"
             name="next"
             value={role === 'host' ? `/host/${code}` : `/play/${code}`}
+          />
+          <button
+            type="submit"
             className="btn-3d font-pixel text-sm w-full py-3 bg-black"
             style={{ color: C.purple }}
           >
