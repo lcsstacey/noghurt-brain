@@ -1,6 +1,6 @@
 import { N, melodyDict, type Song } from './engine';
 
-export type SongId = 'mainframe' | 'nightmare' | 'victory' | 'deeplink';
+export type SongId = 'mainframe' | 'nightmare' | 'victory' | 'deeplink' | 'standby' | 'override';
 
 export const SONGS: Record<SongId, Song> = {
   // ─── CH 01 — MAINFRAME ───────────────────────────────────────
@@ -93,6 +93,74 @@ export const SONGS: Record<SongId, Song> = {
       [56, N.A4, 2.0],
     ]),
   },
+
+  // ─── CH 05 — STANDBY.SYS (lobby variant — chill anticipation) ────
+  // Slower than MAINFRAME (88bpm vs 100), in the same A minor tonality
+  // but with a lifted middle section (Dm) and a rising 4-bar pickup
+  // counter that telegraphs the in-game theme without spoiling it.
+  // Sparse melody — feels like waiting for friends to load in.
+  standby: {
+    id: 'standby',
+    title: 'STANDBY.SYS',
+    bpm: 88,
+    bars: 8,
+    progression: ['Am', 'F', 'C', 'G', 'Am', 'Dm', 'G', 'Am'],
+    leadMode: 'classic',
+    groove: 'classic',
+    melody: melodyDict([
+      // Bar 5 (Am): patient C5-A4-E5 statement
+      [64, N.C5, 1.0], [68, N.A4, 1.0], [72, N.E5, 2.0],
+      // Bar 6 (Dm): rise to F5, dwell
+      [80, N.F5, 1.5], [86, N.D5, 0.5], [88, N.A4, 1.0],
+      // Bar 7 (G): G4-B4-D5 ascending hook
+      [96, N.G4, 0.5], [98, N.B4, 0.5], [100, N.D5, 1.0],
+      [104, N.B4, 0.5], [106, N.D5, 0.5], [108, N.G4, 1.0],
+      // Bar 8 (Am): resolve down to A4
+      [112, N.E5, 1.0], [116, N.C5, 1.0], [120, N.A4, 2.0],
+    ]),
+    counter: melodyDict([
+      // Bars 1-4: rising 4-bar pickup, one note per bar
+      [0,  N.A3, 4.0],   // bar 1
+      [16, N.C4, 4.0],   // bar 2 (over F)
+      [32, N.E4, 4.0],   // bar 3 (over C)
+      [48, N.G4, 2.0], [56, N.B4, 2.0],  // bar 4 (over G) — leading-tone walk into bar 5
+    ]),
+  },
+
+  // ─── CH 06 — OVERRIDE.SYS (mainframe in-game — driving intensity) ──
+  // Faster than NIGHTMARE (140bpm vs 128), A minor with a chromatic Bb
+  // surprise in bar 2/6 that shifts the floor under you. Driving 4-on-floor
+  // but with the snare moved to "and of 2" / "and of 4" for half-time-feel
+  // urgency. Melody rapid, more notes per bar than NIGHTMARE — the player
+  // shouldn't get a moment to breathe while their wager is on the line.
+  override: {
+    id: 'override',
+    title: 'OVERRIDE.SYS',
+    bpm: 140,
+    bars: 8,
+    progression: ['Am', 'Bb', 'E', 'Am', 'Am', 'Dm', 'E', 'A7'],
+    leadMode: 'dark',
+    groove: 'driving',
+    melody: melodyDict([
+      // Bar 5 (Am): rapid climb
+      [64, N.A4, 0.5], [66, N.C5, 0.5], [68, N.E5, 0.5], [70, N.A5, 1.0],
+      [74, N.G5, 0.5], [76, N.E5, 1.0],
+      // Bar 6 (Dm): F-D-A staccato pattern
+      [80, N.F5, 0.5], [82, N.D5, 0.5], [84, N.A4, 0.5], [86, N.F5, 0.5],
+      [88, N.D5, 1.0], [92, N.A4, 1.0],
+      // Bar 7 (E): G#-E-B leading-tone, dwell on B4
+      [96, N.Gs4, 0.5], [98, N.B4, 0.5], [100, N.E5, 1.0],
+      [104, N.B4, 0.5], [106, N.Gs4, 0.5], [108, N.E4, 1.0],
+      // Bar 8 (A7): G descending to E — unresolved
+      [112, N.G4, 0.5], [114, N.E4, 0.5], [116, N.Cs4, 0.5], [118, N.A3, 1.5],
+    ]),
+    counter: melodyDict([
+      [0,  N.A3, 4.0],    // bar 1: drone A3
+      [16, N.Bb3, 2.0],   // bar 2: chromatic Bb tension
+      [32, N.Gs3, 2.0],   // bar 3: leading tone
+      [48, N.A3, 1.0], [52, N.E4, 1.0],  // bar 4: pickup before main melody
+    ]),
+  },
 };
 
 /**
@@ -113,14 +181,28 @@ export type GamePhase =
 
 export function songForPhase(phase: GamePhase): SongId {
   switch (phase) {
+    // Lobby gets its own slower variant — chill anticipation, not the
+    // signature in-game theme.
+    case 'lobby':
+      return 'standby';
+    // Normal-round play (intro / question / reveal) is THE MAINFRAME —
+    // the signature theme.
+    case 'intro':
+    case 'question':
+    case 'reveal':
+      return 'mainframe';
+    // Mainframe round opens with NIGHTMARE PROTOCOL's cinematic
+    // tension, then OVERRIDE.SYS during the wager + final question
+    // for max in-game intensity.
     case 'mainframe_intro':
+      return 'nightmare';
     case 'wager':
     case 'final_question':
     case 'final_reveal':
-      return 'nightmare';
+      return 'override';
     case 'game_over':
       return 'victory';
     default:
-      return 'mainframe';
+      return 'standby';
   }
 }

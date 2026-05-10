@@ -15,9 +15,12 @@ const MENU_SONG: SongId = 'deeplink';
 
 /**
  * Floating music controller — mounted on the host TV view AND the landing
- * page menu. Phase-aware: clicking it once starts the audio context (Web
- * Audio autoplay rule needs a user gesture) and the song auto-switches as
- * room.phase changes. Includes inline mute toggle + volume slider.
+ * page menu. Phase-aware: song auto-switches as room.phase changes.
+ *
+ * Autostart strategy: tries to start immediately on mount (works if a user
+ * gesture happened in the prior 2-3 seconds), and registers a one-time
+ * document-level interaction listener so music starts on the first
+ * click / tap / keypress without an explicit "start music" button.
  *
  * Players' phones never mount this — 8 unsynced playheads on a Discord
  * call would be cacophony.
@@ -27,6 +30,38 @@ export function MusicController({ phase }: Props) {
   const theme = useTheme(initialSong);
   const lastSongId = useRef(theme.songId);
   const [expanded, setExpanded] = useState(false);
+
+  // Try to autostart on mount. May silently fail if no recent user gesture
+  // — that's fine, the global interaction listener below will pick it up.
+  useEffect(() => {
+    if (theme.playing) return;
+    theme.start();
+    // start() is no-op-safe; if the AudioContext is suspended, the next
+    // user gesture handler will resume it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // One-time document-level fallback for autoplay-blocked browsers.
+  // Any click / tap / keypress on the page = music starts. Listener
+  // removes itself after first fire.
+  useEffect(() => {
+    if (theme.playing) return;
+    const startOnFirstGesture = () => {
+      theme.start();
+      window.removeEventListener('pointerdown', startOnFirstGesture);
+      window.removeEventListener('keydown', startOnFirstGesture);
+      window.removeEventListener('touchstart', startOnFirstGesture);
+    };
+    window.addEventListener('pointerdown', startOnFirstGesture, { once: true });
+    window.addEventListener('keydown', startOnFirstGesture, { once: true });
+    window.addEventListener('touchstart', startOnFirstGesture, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', startOnFirstGesture);
+      window.removeEventListener('keydown', startOnFirstGesture);
+      window.removeEventListener('touchstart', startOnFirstGesture);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme.playing]);
 
   // Auto-switch song when phase changes (only once playing).
   useEffect(() => {
