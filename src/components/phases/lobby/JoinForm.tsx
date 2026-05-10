@@ -104,43 +104,45 @@ export function JoinForm({ code, role, discordUser }: JoinFormProps) {
 
         {discordUser && (
           <div
-            className="border-2 px-3 py-2 flex items-center gap-3"
+            className="border-2 px-4 py-3 flex flex-col items-center gap-2"
             style={{
               borderColor: C.purple,
               background: `${C.purple}1a`,
               boxShadow: `0 0 12px ${C.purple}55`,
             }}
           >
-            {discordUser.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={discordUser.avatarUrl}
-                alt=""
-                width={28}
-                height={28}
-                className="rounded-full border-2"
-                style={{ borderColor: C.purple }}
-              />
-            ) : (
+            <div
+              className="font-pixel text-[8px] text-zinc-400 flex items-center gap-1.5"
+            >
+              <Check size={10} style={{ color: C.green }} />
+              <span>DISCORD CONNECTED</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              {discordUser.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={discordUser.avatarUrl}
+                  alt=""
+                  width={28}
+                  height={28}
+                  className="rounded-full border-2 shrink-0"
+                  style={{ borderColor: C.purple }}
+                />
+              ) : (
+                <div
+                  className="w-7 h-7 grid place-items-center border-2 rounded-full shrink-0"
+                  style={{ borderColor: C.purple, color: C.purple }}
+                >
+                  <Check size={12} />
+                </div>
+              )}
               <div
-                className="w-7 h-7 grid place-items-center border-2 rounded-full"
-                style={{ borderColor: C.purple, color: C.purple }}
-              >
-                <Check size={14} />
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <div className="font-pixel text-[8px] text-zinc-400">
-                ▸ DISCORD CONNECTED
-              </div>
-              <div
-                className="font-pixel text-xs truncate text-glow-soft"
+                className="font-pixel text-sm truncate text-glow-soft"
                 style={{ color: C.purple }}
               >
                 {discordUser.name}
               </div>
             </div>
-            <Check size={16} style={{ color: C.green }} />
           </div>
         )}
 
