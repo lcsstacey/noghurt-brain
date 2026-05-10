@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
 import { C } from '@/styles/palette';
 import { createClient } from '@/lib/supabase/server';
-import { LobbyPhone } from '@/components/phases/lobby/LobbyPhone';
 import { JoinForm } from '@/components/phases/lobby/JoinForm';
+import { PhonePhaseRouter } from '@/components/phases/PhonePhaseRouter';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,22 +20,6 @@ function CantJoin() {
         <div className="text-2xl text-glow">GAME IN PROGRESS</div>
         <div className="font-crt text-base text-zinc-500 mt-3">
           This room can&apos;t be joined right now.
-        </div>
-      </div>
-    </main>
-  );
-}
-
-function RoundInProgress() {
-  return (
-    <main
-      className="min-h-screen flex items-center justify-center p-6"
-      style={{ backgroundColor: C.bg }}
-    >
-      <div className="font-pixel text-center" style={{ color: C.cyan }}>
-        <div className="text-2xl text-glow">▸ ROUND IN PROGRESS</div>
-        <div className="font-crt text-base text-zinc-500 mt-3">
-          (Phase 3 wires up the question screens.)
         </div>
       </div>
     </main>
@@ -72,13 +56,7 @@ export default async function PlayPage({ params }: PageProps) {
     : null;
 
   if (existing) {
-    // Existing player. Phase 3 will switch on room.phase to render
-    // intro/question/reveal/etc. phone views; Phase 2 just shows lobby
-    // for `lobby` and a placeholder for everything else.
-    if (room.phase === 'lobby') {
-      return <LobbyPhone code={code} playerId={existing.id} />;
-    }
-    return <RoundInProgress />;
+    return <PhonePhaseRouter code={code} playerId={existing.id} />;
   }
 
   // Not yet a player. They can only join while phase=lobby.
