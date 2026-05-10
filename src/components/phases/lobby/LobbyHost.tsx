@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import QRCode from 'qrcode';
 import { Atom, ChevronRight, Gamepad2, Globe, Power, Radio, Wifi } from 'lucide-react';
 import { C } from '@/styles/palette';
@@ -36,8 +35,7 @@ type LobbyHostProps = {
  * to keep the prototype's visual rhythm.
  */
 export function LobbyHost({ code, joinUrl }: LobbyHostProps) {
-  const router = useRouter();
-  const { room, players, status } = useRoomChannel(code);
+  const { players, status } = useRoomChannel(code);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -52,27 +50,31 @@ export function LobbyHost({ code, joinUrl }: LobbyHostProps) {
       .catch(() => setQrDataUrl(null));
   }, [joinUrl]);
 
-  // When the room advances out of lobby (either by us or by some external
-  // change), refresh so the server component re-renders the right phase view.
-  useEffect(() => {
-    if (room && room.phase !== 'lobby') {
-      router.refresh();
-    }
-  }, [room, router]);
+  // Phase advance is observed by the parent HostPhaseRouter via the same
+  // useRoomChannel — no router.refresh dance needed. We just call startGame
+  // and let realtime propagate.
 
   const handleStart = () => {
     setError(null);
     startTransition(async () => {
-      const result = await startGame(code);
-      if (!result.ok) {
-        setError(result.error);
-        return;
+      try {
+        const result = await startGame(code);
+        if (!result.ok) {
+          // Loud error so a stuck host can see what's wrong.
+          // eslint-disable-next-line no-console
+          console.error('[LobbyHost] startGame failed:', result.error);
+          setError(result.error);
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'startGame threw';
+        // eslint-disable-next-line no-console
+        console.error('[LobbyHost] startGame threw:', e);
+        setError(msg);
       }
-      router.refresh();
     });
   };
 
-  const canStart = players.length >= 2 && status === 'subscribed';
+  const canStart = players.length >= 2 && (status === 'subscribed' || status === 'loading');
 
   return (
     <div className="flex flex-col gap-5 h-full">

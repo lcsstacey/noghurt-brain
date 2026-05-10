@@ -103,7 +103,7 @@ export function QuestionHost({
     }, PHASE_ADVANCE_MS.questionGrace);
 
     return () => clearTimeout(id);
-  }, [isExpired, players, isHost, code, questionId, router, secondsLeft]);
+  }, [isExpired, players, isHost, code, questionId, router]);
 
   const question = QUESTIONS_BY_ID[questionId];
   if (!question) return null;
