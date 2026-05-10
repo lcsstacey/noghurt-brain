@@ -1,8 +1,9 @@
+import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { C } from '@/styles/palette';
 import { createClient } from '@/lib/supabase/server';
 import { JoinForm } from '@/components/phases/lobby/JoinForm';
-import { PhonePhaseRouter } from '@/components/phases/PhonePhaseRouter';
+import { UnifiedView } from '@/components/phases/UnifiedView';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,9 +42,7 @@ export default async function PlayPage({ params }: PageProps) {
 
   if (!room) notFound();
 
-  // Authed callers might already be a player in this room — even mid-game.
-  // Check membership FIRST so existing players see their phone view (not
-  // the "can't join" message intended for fresh visitors).
+  // Authed user might already have a player row in this room.
   const existing = user
     ? (
         await supabase
@@ -56,11 +55,19 @@ export default async function PlayPage({ params }: PageProps) {
     : null;
 
   if (existing) {
-    return <PhonePhaseRouter code={code} playerId={existing.id} />;
+    const headerList = await headers();
+    const origin =
+      headerList.get('origin') ??
+      `https://${headerList.get('host') ?? 'noghurt-brain.vercel.app'}`;
+    const joinUrl = `${origin}/play/${code}`;
+    return <UnifiedView code={code} playerId={existing.id} joinUrl={joinUrl} />;
   }
 
-  // Not yet a player. They can only join while phase=lobby.
+  // No player row yet. Lobby joinable; mid-game = blocked for newcomers.
   if (room.phase !== 'lobby') return <CantJoin />;
 
-  return <JoinForm code={code} role="player" />;
+  // Render JoinForm. The role determines the is_host flag on insert; users
+  // whose user.id matches room.host_id are creating their host seat.
+  const role = user && user.id === room.host_id ? 'host' : 'player';
+  return <JoinForm code={code} role={role} />;
 }

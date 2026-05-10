@@ -26,7 +26,7 @@ export default function LandingPage() {
         setError(result.error);
         return;
       }
-      router.push(`/host/${result.code}`);
+      router.push(`/play/${result.code}`);
     });
   };
 

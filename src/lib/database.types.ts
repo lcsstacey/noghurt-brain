@@ -260,6 +260,10 @@ export type Database = {
       }
       is_room_host: { Args: { p_room_id: string }; Returns: boolean }
       is_room_member: { Args: { p_room_id: string }; Returns: boolean }
+      kick_player: {
+        Args: { p_player_id: string; p_room_id: string }
+        Returns: undefined
+      }
       list_room_answers: {
         Args: { p_question_id: string; p_room_id: string }
         Returns: {

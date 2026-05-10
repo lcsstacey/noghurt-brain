@@ -2,11 +2,13 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import QRCode from 'qrcode';
-import { Atom, ChevronRight, Gamepad2, Globe, Power, Radio, Wifi } from 'lucide-react';
+import { Atom, ChevronRight, Gamepad2, Globe, Power, Radio, Wifi, X } from 'lucide-react';
 import { C } from '@/styles/palette';
 import { PlayerAvatar } from '@/components/shared/PlayerAvatar';
 import { useRoomChannel } from '@/lib/realtime/useRoomChannel';
 import { startGame } from '@/lib/actions/startGame';
+import { kickPlayer } from '@/lib/actions/kickPlayer';
+import { useHostAdmin } from '@/lib/game/HostAdminContext';
 import { toPlayer } from '@/lib/game/colorIcon';
 
 const V2_CATEGORIES = [
@@ -24,6 +26,10 @@ const V2_DIFFICULTY = [
 type LobbyHostProps = {
   code: string;
   joinUrl: string;
+  /** When set, shows the host-only "INITIATE BROADCAST" button inline. */
+  showStartButton?: boolean;
+  /** Caller's player_id, so kick UI can hide on caller's own avatar. */
+  meId?: string;
 };
 
 /**
@@ -34,11 +40,18 @@ type LobbyHostProps = {
  * v2-cut features per docs/MVP_SCOPE.md, surfaced as "V2" placeholders
  * to keep the prototype's visual rhythm.
  */
-export function LobbyHost({ code, joinUrl }: LobbyHostProps) {
+export function LobbyHost({ code, joinUrl, showStartButton = true, meId }: LobbyHostProps) {
   const { players, status } = useRoomChannel(code);
+  const { kickMode } = useHostAdmin();
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const handleKick = async (playerId: string, name: string) => {
+    if (!window.confirm(`Kick ${name}?`)) return;
+    const r = await kickPlayer(code, playerId);
+    if (!r.ok) setError(r.error);
+  };
 
   useEffect(() => {
     QRCode.toDataURL(joinUrl, {
@@ -133,11 +146,31 @@ export function LobbyHost({ code, joinUrl }: LobbyHostProps) {
           <span style={{ color: C.green }}>[{players.length}/8]</span>
         </div>
         <div className="flex flex-wrap gap-5">
-          {players.map((p, i) => (
-            <div key={p.id} className="pixel-pop" style={{ animationDelay: `${i * 0.08}s` }}>
-              <PlayerAvatar player={toPlayer(p)} size={68} />
-            </div>
-          ))}
+          {players.map((p, i) => {
+            const player = toPlayer(p);
+            const isMe = meId === p.id;
+            const showKick = kickMode && !isMe;
+            return (
+              <div
+                key={p.id}
+                className="pixel-pop relative"
+                style={{ animationDelay: `${i * 0.08}s` }}
+              >
+                <PlayerAvatar player={player} size={68} />
+                {showKick && (
+                  <button
+                    type="button"
+                    onClick={() => handleKick(p.id, p.name)}
+                    aria-label={`Kick ${p.name}`}
+                    className="absolute -top-2 -right-2 w-6 h-6 grid place-items-center border-2 bg-black"
+                    style={{ borderColor: C.red, color: C.red }}
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            );
+          })}
           {Array.from({ length: 8 - players.length }).map((_, i) => (
             <div key={i} className="flex flex-col items-center gap-1.5 opacity-30">
               <div className="w-[68px] h-[68px] border-2 border-dashed border-zinc-700 grid place-items-center font-pixel text-zinc-600">
@@ -223,33 +256,37 @@ export function LobbyHost({ code, joinUrl }: LobbyHostProps) {
         </div>
       </div>
 
-      {/* Start button */}
+      {/* Start button — hidden when the floating HostAdminBar provides
+          one (i.e. when meId is set, which means we're on the unified
+          /play route with the admin bar mounted above). */}
       <div className="mt-auto pt-2">
         {error && (
           <div className="font-pixel text-xs text-center mb-2" style={{ color: C.red }}>
             ✗ {error}
           </div>
         )}
-        <button
-          onClick={handleStart}
-          disabled={!canStart || isPending}
-          className="btn-3d font-pixel text-base sm:text-xl w-full py-5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-          style={{
-            color: C.green,
-            background: '#0a0a0a',
-            border: 'none',
-          }}
-        >
-          <span className="flex items-center justify-center gap-3">
-            <Power size={22} className={isPending ? 'warning-pulse' : ''} />
-            {isPending
-              ? 'INITIALIZING…'
-              : players.length < 2
-                ? 'WAITING FOR PLAYERS…'
-                : 'INITIATE BROADCAST'}
-            <ChevronRight size={22} />
-          </span>
-        </button>
+        {showStartButton && (
+          <button
+            onClick={handleStart}
+            disabled={!canStart || isPending}
+            className="btn-3d font-pixel text-base sm:text-xl w-full py-5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            style={{
+              color: C.green,
+              background: '#0a0a0a',
+              border: 'none',
+            }}
+          >
+            <span className="flex items-center justify-center gap-3">
+              <Power size={22} className={isPending ? 'warning-pulse' : ''} />
+              {isPending
+                ? 'INITIALIZING…'
+                : players.length < 2
+                  ? 'WAITING FOR PLAYERS…'
+                  : 'INITIATE BROADCAST'}
+              <ChevronRight size={22} />
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );
