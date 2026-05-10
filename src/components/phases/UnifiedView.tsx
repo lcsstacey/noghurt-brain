@@ -73,12 +73,12 @@ export function UnifiedView({ code, playerId, joinUrl }: Props) {
       {isHost && <HostAdminBar code={code} room={room} players={players} />}
 
       {/* Mobile: phone-style. */}
-      <div className="md:hidden" style={{ paddingTop: isHost ? 56 : 0 }}>
+      <div className="md:hidden">
         <PhoneViewForPhase room={room} me={me} code={code} />
       </div>
 
-      {/* Desktop: TV-style. */}
-      <div className="hidden md:block" style={{ paddingTop: isHost ? 56 : 0 }}>
+      {/* Desktop: TV-style fills viewport vertically. */}
+      <div className="hidden md:block">
         <TvViewForPhase room={room} me={me} code={code} joinUrl={joinUrl} isHost={isHost} />
       </div>
     </HostAdminProvider>
@@ -236,11 +236,11 @@ function TvViewForPhase({
 
   return (
     <main
-      className="min-h-screen p-4 sm:p-6 flex items-start justify-center"
+      className="min-h-screen p-4 sm:p-6 flex justify-center"
       style={{ backgroundColor: C.bg }}
     >
-      <div className="w-full max-w-[1280px]">
-        <HostFrame>{content}</HostFrame>
+      <div className="w-full max-w-[1280px] flex flex-col">
+        <HostFrame className="flex-1">{content}</HostFrame>
       </div>
     </main>
   );
